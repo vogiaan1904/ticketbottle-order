@@ -1,14 +1,9 @@
 package service
 
-type PaymentStatus string
-
-const (
-	PaymentStatusAuthorized PaymentStatus = "AUTHORIZED"
-	PaymentStatusFailed     PaymentStatus = "FAILED"
-	PaymentStatusExpired    PaymentStatus = "EXPIRED"
-)
-
-type HandlePaymentStatusInput struct {
+type HandlePaymentCompletedInput struct {
 	OrderCode string
-	Status    PaymentStatus
+}
+
+type HandlePaymentFailedInput struct {
+	OrderCode string
 }

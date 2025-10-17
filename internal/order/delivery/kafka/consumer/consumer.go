@@ -12,14 +12,14 @@ import (
 
 type Consumer struct {
 	consGr sarama.ConsumerGroup
-	svc    service.OrderService
+	svc    service.Service
 	l      logger.Logger
 	wg     sync.WaitGroup
 }
 
 func NewConsumer(
 	consGr sarama.ConsumerGroup,
-	svc service.OrderService,
+	svc service.Service,
 	l logger.Logger,
 ) *Consumer {
 	return &Consumer{
@@ -31,8 +31,10 @@ func NewConsumer(
 
 func (c *Consumer) processMessage(ctx context.Context, msg *sarama.ConsumerMessage) error {
 	switch msg.Topic {
-	case kafka.TopicPaymentStatus:
-		return c.HandlePaymentStatus(ctx, msg)
+	case kafka.TopicPaymentCompleted:
+		return c.HandlePaymentCompleted(ctx, msg)
+	case kafka.TopicPaymentFailed:
+		return c.HandlePaymentFailed(ctx, msg)
 	default:
 		c.l.Warn(ctx, "Unknown topic", "topic", msg.Topic)
 		return nil
@@ -40,7 +42,7 @@ func (c *Consumer) processMessage(ctx context.Context, msg *sarama.ConsumerMessa
 }
 
 func (c *Consumer) Start(ctx context.Context) error {
-	topics := []string{kafka.TopicPaymentStatus}
+	topics := []string{kafka.TopicPaymentCompleted, kafka.TopicPaymentFailed}
 	c.wg.Go(func() {
 		for {
 			if err := c.consGr.Consume(ctx, topics, c); err != nil {

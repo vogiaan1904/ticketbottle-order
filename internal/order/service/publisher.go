@@ -7,7 +7,7 @@ import (
 	"github.com/vogiaan1904/ticketbottle-order/internal/order/delivery/kafka"
 )
 
-func (s *implOrderService) publishCheckoutCompletedEvent(ctx context.Context, in PubCheckoutCompletedEventInput) error {
+func (s *implService) publishCheckoutCompletedEvent(ctx context.Context, in PubCheckoutCompletedEventInput) error {
 	event := kafka.CheckoutCompletedEvent{
 		SessionID: in.SessionID,
 		UserID:    in.UserID,
@@ -23,7 +23,7 @@ func (s *implOrderService) publishCheckoutCompletedEvent(ctx context.Context, in
 	return nil
 }
 
-func (s *implOrderService) publishCheckoutFailedEvent(ctx context.Context, in PubCheckoutFailedEventInput) error {
+func (s *implService) publishCheckoutFailedEvent(ctx context.Context, in PubCheckoutFailedEventInput) error {
 	event := kafka.CheckoutFailedEvent{
 		SessionID: in.SessionID,
 		UserID:    in.UserID,

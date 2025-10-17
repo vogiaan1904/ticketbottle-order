@@ -4,15 +4,20 @@ import (
 	"context"
 )
 
-func (s *implOrderService) HandlePaymentStatus(ctx context.Context, in HandlePaymentStatusInput) error {
-	switch in.Status {
-	case PaymentStatusAuthorized:
-		return s.confirm(ctx, in.OrderCode)
-	case PaymentStatusFailed, PaymentStatusExpired:
-		return s.handlePaymentFailure(ctx, in.OrderCode)
+func (s *implService) HandlePaymentCompleted(ctx context.Context, in HandlePaymentCompletedInput) error {
+	if err := s.confirm(ctx, in.OrderCode); err != nil {
+		s.l.Errorf(ctx, "service.consumer.HandlePaymentCompleted: %v", err)
+		return err
 	}
 
-	s.l.Warnf(ctx, "Unknown payment status: %s for order: %s", in.Status, in.OrderCode)
+	return nil
+}
+
+func (s *implService) HandlePaymentFailed(ctx context.Context, in HandlePaymentFailedInput) error {
+	if err := s.handlePaymentFailure(ctx, in.OrderCode); err != nil {
+		s.l.Errorf(ctx, "service.consumer.HandlePaymentFailed: %v", err)
+		return err
+	}
 
 	return nil
 }

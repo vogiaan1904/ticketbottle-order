@@ -11,7 +11,7 @@ func generatePaymentIdempotencyKey(orderCode string, provider string) string {
 	return fmt.Sprintf("%s:%s", orderCode, provider)
 }
 
-func (s *implOrderService) releaseTickets(ctx context.Context, code string) error {
+func (s *implService) releaseTickets(ctx context.Context, code string) error {
 	_, err := s.invSvc.Release(ctx, &inventory.ReleaseRequest{
 		OrderCode: code,
 	})

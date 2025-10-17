@@ -14,6 +14,7 @@ type Config struct {
 	Env          string
 	Server       ServerConfig
 	Redis        RedisConfig
+	Mongo        MongoConfig
 	JWT          JWTConfig
 	Log          LogConfig
 	Kafka        KafkaConfig
@@ -26,7 +27,7 @@ type ServerConfig struct {
 	WriteTimeout time.Duration
 	IdleTimeout  time.Duration
 
-	PaymentTimeoutSeconds int
+	PaymentTimeoutSeconds int32
 }
 
 type RedisConfig struct {
@@ -36,6 +37,11 @@ type RedisConfig struct {
 	MaxRetries   int
 	PoolSize     int
 	MinIdleConns int
+}
+
+type MongoConfig struct {
+	URI      string
+	Database string
 }
 
 type KafkaConfig struct {
@@ -75,7 +81,7 @@ func Load() (*Config, error) {
 			WriteTimeout: getEnvAsDuration("SERVER_WRITE_TIMEOUT", 30*time.Second),
 			IdleTimeout:  getEnvAsDuration("SERVER_IDLE_TIMEOUT", 60*time.Second),
 
-			PaymentTimeoutSeconds: getEnvAsInt("PAYMENT_TIMEOUT_SECONDS", 600),
+			PaymentTimeoutSeconds: int32(getEnvAsInt("PAYMENT_TIMEOUT_SECONDS", 600)),
 		},
 		Redis: RedisConfig{
 			Addr:         getEnv("REDIS_ADDR", "localhost:6379"),
@@ -84,6 +90,10 @@ func Load() (*Config, error) {
 			MaxRetries:   getEnvAsInt("REDIS_MAX_RETRIES", 3),
 			PoolSize:     getEnvAsInt("REDIS_POOL_SIZE", 10),
 			MinIdleConns: getEnvAsInt("REDIS_MIN_IDLE_CONNS", 5),
+		},
+		Mongo: MongoConfig{
+			URI:      getEnv("MONGO_URI", "mongodb://localhost:27017"),
+			Database: getEnv("MONGO_DATABASE", "ticketbottle"),
 		},
 		JWT: JWTConfig{
 			Secret: getEnv("JWT_SECRET", "your-super-secret-key-change-in-production"),
@@ -176,7 +186,7 @@ func getEnvAsSlice(key string, defaultValue []string) []string {
 
 	// Split by comma
 	var result []string
-	for v := range strings.SplitSeq(valueStr, ",") {
+	for _, v := range strings.Split(valueStr, ",") {
 		if trimmed := strings.TrimSpace(v); trimmed != "" {
 			result = append(result, trimmed)
 		}

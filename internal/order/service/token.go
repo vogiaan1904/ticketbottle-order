@@ -10,7 +10,7 @@ import (
 // 	return fmt.Sprintf("checkout:token:%s", ssID)
 // }
 
-func (s *implOrderService) validateCheckoutToken(ctx context.Context, token string) (models.CheckoutTokenClaim, error) {
+func (s *implService) validateCheckoutToken(ctx context.Context, token string) (models.CheckoutTokenClaim, error) {
 	p, err := s.jwt.Verify(token)
 	if err != nil {
 		return models.CheckoutTokenClaim{}, err

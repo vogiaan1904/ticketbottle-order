@@ -2,6 +2,7 @@ protoc-all:
 	$(MAKE) protoc PROTO=protos-submodule/inventory.proto OUT_DIR=pkg/grpc/inventory
 	$(MAKE) protoc PROTO=protos-submodule/event.proto OUT_DIR=pkg/grpc/event
 	$(MAKE) protoc PROTO=protos-submodule/payment.proto OUT_DIR=pkg/grpc/payment
+	$(MAKE) protoc PROTO=protos-submodule/order.proto OUT_DIR=pkg/grpc/order
 
 protoc:
 	protoc --go_out=$(OUT_DIR) --go_opt=paths=source_relative \
@@ -16,3 +17,6 @@ update-proto:
 	make protoc-all
 
 	@echo "Proto code regenerated."
+
+run: ## Run the application
+	go run cmd/server/main.go

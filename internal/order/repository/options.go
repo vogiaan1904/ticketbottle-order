@@ -1,11 +1,13 @@
 package repository
 
 import (
+	"time"
+
 	"github.com/vogiaan1904/ticketbottle-order/internal/models"
 )
 
 type CreateOrderOption struct {
-	Session      string
+	SessionID    string
 	Code         string
 	UserID       string
 	UserFullName string
@@ -17,5 +19,7 @@ type CreateOrderOption struct {
 }
 
 type UpdateOrderOption struct {
+	Model  models.Order
 	Status models.OrderStatus
+	PaidAt *time.Time
 }

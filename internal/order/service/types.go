@@ -3,19 +3,20 @@ package service
 import "github.com/vogiaan1904/ticketbottle-order/internal/models"
 
 type CreateOrderInput struct {
-	CheckoutToken   string
-	UserID          string
-	Email           string
-	UserFullName    string
-	EventID         string
-	Currency        string
-	RedirectUrl     string
-	PaymentProvider models.PaymentProvider
-	Items           []OrderItemInput
+	CheckoutToken string
+	UserID        string
+	Email         string
+	UserFullName  string
+	EventID       string
+	Currency      string
+	RedirectUrl   string
+	PaymentMethod models.PaymentMethod
+	Items         []OrderItemInput
 }
 
 type CreateOrderOutput struct {
-	OrderCode   string
+	Order       models.Order
+	OrderItems  []models.OrderItem
 	RedirectUrl string
 }
 

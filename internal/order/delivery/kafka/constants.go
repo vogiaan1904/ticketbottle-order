@@ -1,7 +1,8 @@
 package kafka
 
 const (
-	TopicPaymentStatus = "payment.status"
+	TopicPaymentCompleted = "payment.completed"
+	TopicPaymentFailed    = "payment.failed"
 
 	TopicCheckoutCompleted = "checkout.completed"
 	TopicCheckoutFailed    = "checkout.failed"

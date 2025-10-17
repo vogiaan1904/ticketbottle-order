@@ -14,7 +14,7 @@ import (
 	"github.com/vogiaan1904/ticketbottle-order/pkg/util"
 )
 
-func (s *implOrderService) Create(ctx context.Context, in CreateOrderInput) (CreateOrderOutput, error) {
+func (s *implService) Create(ctx context.Context, in CreateOrderInput) (CreateOrderOutput, error) {
 	claim, err := s.validateCheckoutToken(ctx, in.CheckoutToken)
 	if err != nil {
 		s.l.Errorf(ctx, "internal.order.service.Create: %v", err)
@@ -138,13 +138,13 @@ func (s *implOrderService) Create(ctx context.Context, in CreateOrderInput) (Cre
 	saga.TicketsReserved = true
 
 	amt := int64(0)
-	itmIns := make([]CreateOrderItemInput, len(in.Items))
+	itmIns := make([]repo.CreateOrderItemOption, len(in.Items))
 
 	for _, i := range in.Items {
 		tc := tcMap[i.TicketClassID]
 		tt := tc.PriceCents * int64(i.Quantity)
 		amt += tt
-		itmIns = append(itmIns, CreateOrderItemInput{
+		itmIns = append(itmIns, repo.CreateOrderItemOption{
 			TicketClassID:   i.TicketClassID,
 			TicketClassName: tc.Name,
 			PriceAtPurchase: tc.PriceCents,
@@ -169,7 +169,7 @@ func (s *implOrderService) Create(ctx context.Context, in CreateOrderInput) (Cre
 	}
 	saga.CreatedOrder = &o
 
-	_, err = s.itmSvc.CreateMany(ctx, o.ID.Hex(), itmIns)
+	itms, err := s.repo.CreateManyItems(ctx, o.ID.Hex(), itmIns)
 	if err != nil {
 		s.releaseTickets(ctx, code)
 		s.deleteOrder(ctx, o.ID.Hex())
@@ -182,9 +182,9 @@ func (s *implOrderService) Create(ctx context.Context, in CreateOrderInput) (Cre
 		OrderCode:      o.Code,
 		AmountCents:    o.TotalAmount,
 		Currency:       "VND",
-		Provider:       payment.PaymentProvider(payment.PaymentProvider_value[string(in.PaymentProvider)]),
+		Provider:       payment.PaymentProvider(payment.PaymentProvider_value[string(in.PaymentMethod)]),
 		RedirectUrl:    in.RedirectUrl,
-		IdempotencyKey: generatePaymentIdempotencyKey(o.Code, string(in.PaymentProvider)),
+		IdempotencyKey: generatePaymentIdempotencyKey(o.Code, string(in.PaymentMethod)),
 		TimeoutSeconds: s.cfg.PaymentTimeoutSeconds,
 	})
 	if err != nil {
@@ -194,12 +194,13 @@ func (s *implOrderService) Create(ctx context.Context, in CreateOrderInput) (Cre
 	}
 
 	return CreateOrderOutput{
-		OrderCode:   o.Code,
+		Order:       o,
+		OrderItems:  itms,
 		RedirectUrl: pResp.PaymentUrl,
 	}, nil
 }
 
-func (s *implOrderService) confirm(ctx context.Context, code string) error {
+func (s *implService) confirm(ctx context.Context, code string) error {
 	o, err := s.repo.GetByCode(ctx, code)
 	if err != nil {
 		s.l.Error(ctx, "internal.order.service.HandlePaymentStatus: cannot get order by code %v: %v", code, err)
@@ -239,7 +240,7 @@ func (s *implOrderService) confirm(ctx context.Context, code string) error {
 	return nil
 }
 
-func (s *implOrderService) handlePaymentFailure(ctx context.Context, code string) error {
+func (s *implService) handlePaymentFailure(ctx context.Context, code string) error {
 	err := s.releaseTickets(ctx, code)
 	if err != nil {
 		s.l.Errorf(ctx, "Failed to release tickets for failed payment order %s: %v", code, err)
@@ -271,7 +272,7 @@ func (s *implOrderService) handlePaymentFailure(ctx context.Context, code string
 	return nil
 }
 
-func (s *implOrderService) deleteOrder(ctx context.Context, orderID string) error {
+func (s *implService) deleteOrder(ctx context.Context, orderID string) error {
 	err := s.repo.Delete(ctx, orderID)
 	if err != nil {
 		s.l.Errorf(ctx, "Failed to delete order %s: %v", orderID, err)
