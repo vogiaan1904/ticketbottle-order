@@ -18,5 +18,8 @@ update-proto:
 
 	@echo "Proto code regenerated."
 
-run: ## Run the application
-	go run cmd/server/main.go
+run-api: ## Run the application
+	go run cmd/api/main.go
+
+run-consumer: ## Run the consumer
+	go run cmd/consumer/main.go

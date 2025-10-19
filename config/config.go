@@ -92,8 +92,8 @@ func Load() (*Config, error) {
 			MinIdleConns: getEnvAsInt("REDIS_MIN_IDLE_CONNS", 5),
 		},
 		Mongo: MongoConfig{
-			URI:      getEnv("MONGO_URI", "mongodb://localhost:27017"),
-			Database: getEnv("MONGO_DATABASE", "ticketbottle"),
+			URI:      getEnv("MONGO_URI", "mongodb://root:root@localhost:27017"),
+			Database: getEnv("MONGO_DATABASE", "ticketbottle-order"),
 		},
 		JWT: JWTConfig{
 			Secret: getEnv("JWT_SECRET", "your-super-secret-key-change-in-production"),
@@ -109,7 +109,7 @@ func Load() (*Config, error) {
 			ProducerRetryMax:     getEnvAsInt("KAFKA_PRODUCER_RETRY_MAX", 3),
 			ProducerRequiredAcks: getEnvAsInt("KAFKA_PRODUCER_REQUIRED_ACKS", 1),
 			Enabled:              getEnvAsBool("KAFKA_ENABLED", true),
-			ConsumerGroupID:      getEnv("KAFKA_CONSUMER_GROUP_ID", "waitroom-service"),
+			ConsumerGroupID:      getEnv("KAFKA_CONSUMER_GROUP_ID", "order-service"),
 		},
 		Microservice: MicroserviceConfig{
 			Event:     getEnv("EVENT_SERVICE_ADDR", "localhost:50053"),

@@ -16,6 +16,7 @@ var (
 	ErrTicketClassNotFound  = errors.New("ticket class not found")
 	ErrTicketSoldOut        = errors.New("ticket sold out")
 	ErrNotEnoughTickets     = errors.New("not enough tickets available")
+	ErrEventConfigNotFound  = errors.New("event config not found")
 
 	ErrCheckoutExpired          = errors.New("checkout session has expired")
 	ErrInvalidCheckoutToken     = errors.New("invalid checkout token")

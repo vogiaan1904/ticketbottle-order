@@ -43,36 +43,38 @@ func (c *Consumer) processMessage(ctx context.Context, msg *sarama.ConsumerMessa
 
 func (c *Consumer) Start(ctx context.Context) error {
 	topics := []string{kafka.TopicPaymentCompleted, kafka.TopicPaymentFailed}
-	c.wg.Go(func() {
+	c.wg.Add(1)
+	go func() {
+		defer c.wg.Done()
 		for {
+			// `Consume` should be called inside an infinite loop, when a
+			// server-side rebalance happens, the consumer session will need to be
+			// recreated to get the new claims
 			if err := c.consGr.Consume(ctx, topics, c); err != nil {
 				c.l.Errorf(ctx, "delivery.kafka.consumer.consumer.Start: %v", err)
 			}
 
+			// check if context was cancelled, signaling that the consumer should stop
 			if ctx.Err() != nil {
-				c.l.Infof(ctx, "delivery.kafka.consumer.consumer.Start: %v", ctx.Err())
+				c.l.Infof(ctx, "Context cancelled, stopping consumer")
 				return
 			}
 		}
-	})
-
-	// Handle errors
-	c.wg.Go(func() {
-		for err := range c.consGr.Errors() {
-			c.l.Errorf(ctx, "delivery.kafka.consumer.consumer.Start: %v", err)
-		}
-	})
+	}()
 
 	c.l.Infof(ctx, "Consumer is consuming topics: %v", topics)
 	return nil
 }
 
 func (c *Consumer) Close() error {
+	// Wait for all goroutines to finish first
+	c.wg.Wait()
+
+	// Then close the consumer group
 	if err := c.consGr.Close(); err != nil {
 		return err
 	}
 
-	c.wg.Wait()
 	return nil
 }
 

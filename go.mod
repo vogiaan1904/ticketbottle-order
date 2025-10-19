@@ -5,6 +5,7 @@ go 1.25.1
 require (
 	github.com/IBM/sarama v1.46.1
 	github.com/gin-gonic/gin v1.11.0
+	github.com/golang-jwt/jwt v3.2.2+incompatible
 	github.com/joho/godotenv v1.5.1
 	github.com/redis/go-redis/v9 v9.14.0
 	go.mongodb.org/mongo-driver v1.17.4
@@ -30,7 +31,6 @@ require (
 	github.com/go-playground/validator/v10 v10.27.0 // indirect
 	github.com/goccy/go-json v0.10.2 // indirect
 	github.com/goccy/go-yaml v1.18.0 // indirect
-	github.com/golang-jwt/jwt v3.2.2+incompatible // indirect
 	github.com/golang/snappy v0.0.4 // indirect
 	github.com/hashicorp/go-uuid v1.0.3 // indirect
 	github.com/jcmturner/aescts/v2 v2.0.0 // indirect

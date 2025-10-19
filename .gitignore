@@ -19,3 +19,5 @@ mock_*
 .DS_Store
 
 .env
+
+*-data

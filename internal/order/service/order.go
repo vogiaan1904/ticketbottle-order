@@ -15,22 +15,8 @@ import (
 )
 
 func (s *implService) Create(ctx context.Context, in CreateOrderInput) (CreateOrderOutput, error) {
-	claim, err := s.validateCheckoutToken(ctx, in.CheckoutToken)
-	if err != nil {
-		s.l.Errorf(ctx, "internal.order.service.Create: %v", err)
-		return CreateOrderOutput{}, err
-	}
-
-	if claim.UserID != in.UserID || claim.EventID != in.EventID {
-		s.l.Errorf(ctx, "internal.order.service.Create: token user ID does not match input user ID")
-		return CreateOrderOutput{}, order.ErrInvalidCheckoutToken
-	}
-
 	var e *event.Event
-	tcMap := make(map[string]*inventory.TicketClass)
-
-	ctx, cancel := context.WithTimeout(ctx, 30*time.Second)
-	defer cancel()
+	var eCfg *event.EventConfig
 
 	wg := sync.WaitGroup{}
 	var wgErr error
@@ -41,39 +27,38 @@ func (s *implService) Create(ctx context.Context, in CreateOrderInput) (CreateOr
 			Id: in.EventID,
 		})
 		if err != nil {
-			s.l.Errorf(ctx, "failed to get event: %v", err)
+			s.l.Errorf(ctx, "internal.order.service.Create.evSvc.FindOne: %v", err)
 			wgErr = err
 			return
+		}
+
+		if resp.Event == nil {
+			s.l.Errorf(ctx, "internal.order.service.Create: %v", in.EventID)
+			wgErr = order.ErrEventNotFound
+			return
+
 		}
 
 		e = resp.Event
 	})
 
 	wg.Go(func() {
-		tcIds := make([]string, len(in.Items))
-		for i, item := range in.Items {
-			tcIds[i] = item.TicketClassID
-		}
-
-		resp, err := s.invSvc.FindManyTicketClass(ctx, &inventory.FindManyTicketClassRequest{
+		resp, err := s.evSvc.GetConfig(ctx, &event.GetEventConfigRequest{
 			EventId: in.EventID,
-			Ids:     tcIds,
 		})
 		if err != nil {
-			s.l.Errorf(ctx, "failed to get ticket classes: %v", err)
+			s.l.Errorf(ctx, "internal.order.service.Create.evSvc.GetConfig: %v", err)
 			wgErr = err
 			return
 		}
 
-		if resp == nil || len(resp.TicketClasses) == 0 {
-			s.l.Errorf(ctx, "no ticket classes found for event: %v", in.EventID)
-			wgErr = order.ErrTicketClassNotFound
+		if resp.EventConfig == nil {
+			s.l.Errorf(ctx, "internal.order.service.Create: %v", in.EventID)
+			wgErr = order.ErrEventConfigNotFound
 			return
 		}
 
-		for _, tc := range resp.TicketClasses {
-			tcMap[tc.Id] = tc
-		}
+		eCfg = resp.EventConfig
 	})
 
 	wg.Wait()
@@ -82,8 +67,49 @@ func (s *implService) Create(ctx context.Context, in CreateOrderInput) (CreateOr
 	}
 
 	if e.Status != event.EventStatus_EVENT_STATUS_PUBLISHED {
-		s.l.Errorf(ctx, "event is not active: %v", in.EventID)
+		s.l.Errorf(ctx, "internal.order.service.Create: %v", in.EventID)
 		return CreateOrderOutput{}, order.ErrEventNotReadyForSale
+	}
+
+	if eCfg.AllowWaitRoom {
+		claim, err := s.validateCheckoutToken(ctx, in.CheckoutToken)
+		if err != nil {
+			s.l.Errorf(ctx, "internal.order.service.Create: %v", err)
+			return CreateOrderOutput{}, err
+		}
+
+		if claim.UserID != in.UserID || claim.EventID != in.EventID {
+			s.l.Errorf(ctx, "internal.order.service.Create: %v", order.ErrInvalidCheckoutToken)
+			return CreateOrderOutput{}, order.ErrInvalidCheckoutToken
+		}
+	}
+
+	tcMap := make(map[string]*inventory.TicketClass)
+
+	ctx, cancel := context.WithTimeout(ctx, 30*time.Second)
+	defer cancel()
+
+	tcIds := make([]string, len(in.Items))
+	for i, item := range in.Items {
+		tcIds[i] = item.TicketClassID
+	}
+
+	tcResp, err := s.invSvc.FindManyTicketClass(ctx, &inventory.FindManyTicketClassRequest{
+		EventId: in.EventID,
+		Ids:     tcIds,
+	})
+	if err != nil {
+		s.l.Errorf(ctx, "internal.order.service.Create.invSvc.FindManyTicketClass: %v", err)
+		return CreateOrderOutput{}, err
+	}
+
+	if tcResp == nil || len(tcResp.TicketClasses) == 0 {
+		s.l.Errorf(ctx, "internal.order.service.Create: %v", in.EventID)
+		return CreateOrderOutput{}, order.ErrTicketClassNotFound
+	}
+
+	for _, tc := range tcResp.TicketClasses {
+		tcMap[tc.Id] = tc
 	}
 
 	resp, err := s.invSvc.CheckAvailability(ctx, &inventory.CheckAvailabilityRequest{
@@ -99,12 +125,12 @@ func (s *implService) Create(ctx context.Context, in CreateOrderInput) (CreateOr
 		}(),
 	})
 	if err != nil {
-		s.l.Errorf(ctx, "failed to check availability: %v", err)
+		s.l.Errorf(ctx, "internal.order.service.Create.invSvc.CheckAvailability: %v", err)
 		return CreateOrderOutput{}, err
 	}
 
 	if !resp.Accept {
-		s.l.Errorf(ctx, "not enough tickets available")
+		s.l.Errorf(ctx, "internal.order.service.Create: %v", order.ErrNotEnoughTickets)
 		return CreateOrderOutput{}, order.ErrNotEnoughTickets
 	}
 

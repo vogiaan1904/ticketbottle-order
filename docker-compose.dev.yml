@@ -1,0 +1,16 @@
+services:
+  mongo:
+    container_name: ticketbottle-order
+    image: mongo:8
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: root
+      MONGO_INITDB_ROOT_PASSWORD: root
+    ports:
+      - 27017:27017
+    volumes:
+      - ./mongo-data:/data/db
+    restart: unless-stopped
+
+volumes:
+  mongo-data:
+    driver: local

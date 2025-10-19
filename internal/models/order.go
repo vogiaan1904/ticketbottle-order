@@ -8,7 +8,7 @@ import (
 
 type Order struct {
 	ID            primitive.ObjectID `bson:"_id"`
-	SessionID     string             `bson:"session_id"`
+	SessionID     string             `bson:"session_id,omitempty"`
 	Code          string             `bson:"code"`
 	UserID        string             `bson:"user_id"`
 	UserFullName  string             `bson:"user_full_name"`
