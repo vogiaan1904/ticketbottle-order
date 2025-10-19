@@ -11,10 +11,11 @@ import (
 	"github.com/vogiaan1904/ticketbottle-order/pkg/grpc/event"
 	"github.com/vogiaan1904/ticketbottle-order/pkg/grpc/inventory"
 	"github.com/vogiaan1904/ticketbottle-order/pkg/grpc/payment"
+	"github.com/vogiaan1904/ticketbottle-order/pkg/mongo"
 	"github.com/vogiaan1904/ticketbottle-order/pkg/util"
 )
 
-func (s *implService) Create(ctx context.Context, in CreateOrderInput) (CreateOrderOutput, error) {
+func (s *implService) Create(ctx context.Context, in order.CreateOrderInput) (order.CreateOrderOutput, error) {
 	var e *event.Event
 	var eCfg *event.EventConfig
 
@@ -63,24 +64,24 @@ func (s *implService) Create(ctx context.Context, in CreateOrderInput) (CreateOr
 
 	wg.Wait()
 	if wgErr != nil {
-		return CreateOrderOutput{}, wgErr
+		return order.CreateOrderOutput{}, wgErr
 	}
 
 	if e.Status != event.EventStatus_EVENT_STATUS_PUBLISHED {
 		s.l.Errorf(ctx, "internal.order.service.Create: %v", in.EventID)
-		return CreateOrderOutput{}, order.ErrEventNotReadyForSale
+		return order.CreateOrderOutput{}, order.ErrEventNotReadyForSale
 	}
 
 	if eCfg.AllowWaitRoom {
 		claim, err := s.validateCheckoutToken(ctx, in.CheckoutToken)
 		if err != nil {
 			s.l.Errorf(ctx, "internal.order.service.Create: %v", err)
-			return CreateOrderOutput{}, err
+			return order.CreateOrderOutput{}, err
 		}
 
 		if claim.UserID != in.UserID || claim.EventID != in.EventID {
 			s.l.Errorf(ctx, "internal.order.service.Create: %v", order.ErrInvalidCheckoutToken)
-			return CreateOrderOutput{}, order.ErrInvalidCheckoutToken
+			return order.CreateOrderOutput{}, order.ErrInvalidCheckoutToken
 		}
 	}
 
@@ -100,12 +101,12 @@ func (s *implService) Create(ctx context.Context, in CreateOrderInput) (CreateOr
 	})
 	if err != nil {
 		s.l.Errorf(ctx, "internal.order.service.Create.invSvc.FindManyTicketClass: %v", err)
-		return CreateOrderOutput{}, err
+		return order.CreateOrderOutput{}, err
 	}
 
 	if tcResp == nil || len(tcResp.TicketClasses) == 0 {
 		s.l.Errorf(ctx, "internal.order.service.Create: %v", in.EventID)
-		return CreateOrderOutput{}, order.ErrTicketClassNotFound
+		return order.CreateOrderOutput{}, order.ErrTicketClassNotFound
 	}
 
 	for _, tc := range tcResp.TicketClasses {
@@ -126,12 +127,12 @@ func (s *implService) Create(ctx context.Context, in CreateOrderInput) (CreateOr
 	})
 	if err != nil {
 		s.l.Errorf(ctx, "internal.order.service.Create.invSvc.CheckAvailability: %v", err)
-		return CreateOrderOutput{}, err
+		return order.CreateOrderOutput{}, err
 	}
 
 	if !resp.Accept {
 		s.l.Errorf(ctx, "internal.order.service.Create: %v", order.ErrNotEnoughTickets)
-		return CreateOrderOutput{}, order.ErrNotEnoughTickets
+		return order.CreateOrderOutput{}, order.ErrNotEnoughTickets
 	}
 
 	saga := &SagaCompensation{}
@@ -159,7 +160,7 @@ func (s *implService) Create(ctx context.Context, in CreateOrderInput) (CreateOr
 	})
 	if err != nil {
 		s.l.Errorf(ctx, "failed to reserve tickets: %v", err)
-		return CreateOrderOutput{}, err
+		return order.CreateOrderOutput{}, err
 	}
 	saga.TicketsReserved = true
 
@@ -191,16 +192,16 @@ func (s *implService) Create(ctx context.Context, in CreateOrderInput) (CreateOr
 	if err != nil {
 		s.releaseTickets(ctx, code)
 		s.l.Errorf(ctx, "failed to create order: %v", err)
-		return CreateOrderOutput{}, err
+		return order.CreateOrderOutput{}, err
 	}
 	saga.CreatedOrder = &o
 
 	itms, err := s.repo.CreateManyItems(ctx, o.ID.Hex(), itmIns)
 	if err != nil {
 		s.releaseTickets(ctx, code)
-		s.deleteOrder(ctx, o.ID.Hex())
+		s.delete(ctx, o.ID.Hex())
 		s.l.Errorf(ctx, "failed to create order items: %v", err)
-		return CreateOrderOutput{}, err
+		return order.CreateOrderOutput{}, err
 	}
 	saga.ItemsCreated = true
 
@@ -216,10 +217,10 @@ func (s *implService) Create(ctx context.Context, in CreateOrderInput) (CreateOr
 	if err != nil {
 		s.compensate(ctx, saga)
 		s.l.Errorf(ctx, "failed to create payment intent: %v", err)
-		return CreateOrderOutput{}, err
+		return order.CreateOrderOutput{}, err
 	}
 
-	return CreateOrderOutput{
+	return order.CreateOrderOutput{
 		Order:       o,
 		OrderItems:  itms,
 		RedirectUrl: pResp.PaymentUrl,
@@ -227,7 +228,11 @@ func (s *implService) Create(ctx context.Context, in CreateOrderInput) (CreateOr
 }
 
 func (s *implService) confirm(ctx context.Context, code string) error {
-	o, err := s.repo.GetByCode(ctx, code)
+	o, err := s.repo.GetOne(ctx, repo.GetOneOrderOption{
+		FilterOrder: order.FilterOrder{
+			Code: code,
+		},
+	})
 	if err != nil {
 		s.l.Error(ctx, "internal.order.service.HandlePaymentStatus: cannot get order by code %v: %v", code, err)
 		return err
@@ -254,7 +259,7 @@ func (s *implService) confirm(ctx context.Context, code string) error {
 		return err
 	}
 
-	err = s.publishCheckoutCompletedEvent(ctx, PubCheckoutCompletedEventInput{
+	err = s.publishCheckoutCompletedEvent(ctx, order.PubCheckoutCompletedEventInput{
 		SessionID: o.SessionID,
 		UserID:    o.UserID,
 		EventID:   o.EventID,
@@ -269,12 +274,20 @@ func (s *implService) confirm(ctx context.Context, code string) error {
 func (s *implService) handlePaymentFailure(ctx context.Context, code string) error {
 	err := s.releaseTickets(ctx, code)
 	if err != nil {
-		s.l.Errorf(ctx, "Failed to release tickets for failed payment order %s: %v", code, err)
+		s.l.Errorf(ctx, "internal.order.service.handlePaymentFailure.releaseTickets: %v", err)
 	}
 
-	o, err := s.repo.GetByCode(ctx, code)
+	o, err := s.repo.GetOne(ctx, repo.GetOneOrderOption{
+		FilterOrder: order.FilterOrder{
+			Code: code,
+		},
+	})
 	if err != nil {
-		s.l.Error(ctx, "internal.order.service.HandlePaymentStatus: cannot get order by code %v: %v", code, err)
+		if err == mongo.ErrNoDocuments {
+			s.l.Warnf(ctx, "internal.order.service.handlePaymentFailure.repo.GetByCode: %v", order.ErrOrderNotFound)
+			return order.ErrOrderNotFound
+		}
+		s.l.Errorf(ctx, "internal.order.service.handlePaymentFailure.repo.GetByCode: %v", err)
 		return err
 	}
 
@@ -282,23 +295,23 @@ func (s *implService) handlePaymentFailure(ctx context.Context, code string) err
 		Status: models.OrderStatusPaymentFailed,
 	})
 	if err != nil {
-		s.l.Errorf(ctx, "Failed to update order status to cancelled for %s: %v", code, err)
+		s.l.Errorf(ctx, "internal.order.service.handlePaymentFailure.repo.Update: %v", err)
 		return err
 	}
 
-	err = s.publishCheckoutFailedEvent(ctx, PubCheckoutFailedEventInput{
+	err = s.publishCheckoutFailedEvent(ctx, order.PubCheckoutFailedEventInput{
 		SessionID: o.SessionID,
 		UserID:    o.UserID,
 		EventID:   o.EventID,
 	})
 	if err != nil {
-		s.l.Errorf(ctx, "Failed to publish order cancelled event for %s: %v", code, err)
+		s.l.Errorf(ctx, "internal.order.service.handlePaymentFailure.publishCheckoutFailedEvent: %v", err)
 	}
 
 	return nil
 }
 
-func (s *implService) deleteOrder(ctx context.Context, orderID string) error {
+func (s *implService) delete(ctx context.Context, orderID string) error {
 	err := s.repo.Delete(ctx, orderID)
 	if err != nil {
 		s.l.Errorf(ctx, "Failed to delete order %s: %v", orderID, err)
@@ -306,4 +319,96 @@ func (s *implService) deleteOrder(ctx context.Context, orderID string) error {
 	}
 	s.l.Infof(ctx, "Successfully deleted order %s", orderID)
 	return nil
+}
+
+func (s *implService) Cancel(ctx context.Context, ID string) error {
+	o, err := s.repo.GetByID(ctx, ID)
+	if err != nil {
+		if err == mongo.ErrNoDocuments {
+			s.l.Warnf(ctx, "internal.order.service.Cancel: %v", order.ErrOrderNotFound)
+			return order.ErrOrderNotFound
+		}
+		s.l.Errorf(ctx, "internal.order.service.Cancel.repo.GetByID:%v", err)
+		return err
+	}
+
+	if o.Status != models.OrderStatusPending {
+		s.l.Errorf(ctx, "internal.order.service.Cancel: %v", order.ErrOrderNotPending)
+		return order.ErrOrderNotPending
+	}
+
+	if err := s.releaseTickets(ctx, o.Code); err != nil {
+		s.l.Errorf(ctx, "internal.order.service.Cancel.releaseTickets: %v", err)
+	}
+
+	_, err = s.repo.Update(ctx, o.ID.Hex(), repo.UpdateOrderOption{
+		Status: models.OrderStatusCancelled,
+	})
+	if err != nil {
+		s.l.Errorf(ctx, "Failed to update order status to cancelled for %s: %v", o.Code, err)
+		return order.ErrOrderCancellationFailed
+	}
+
+	if o.SessionID != "" {
+		if err := s.publishCheckoutFailedEvent(ctx, order.PubCheckoutFailedEventInput{
+			SessionID: o.SessionID,
+			UserID:    o.UserID,
+			EventID:   o.EventID,
+		}); err != nil {
+			s.l.Warnf(ctx, "Failed to publish checkout cancelled event for order %s: %v", o.Code, err)
+		}
+	}
+
+	return nil
+}
+
+func (s *implService) GetMany(ctx context.Context, in order.GetManyOrderInput) (order.GetManyOrderOutput, error) {
+	os, pag, err := s.repo.GetMany(ctx, repo.GetManyOrderOption(in))
+	if err != nil {
+		s.l.Errorf(ctx, "internal.order.service.GetMany.repo.GetMany: %v", err)
+		return order.GetManyOrderOutput{}, err
+	}
+
+	return order.GetManyOrderOutput{
+		Orders: os,
+		Pag:    pag,
+	}, nil
+}
+
+func (s *implService) GetByID(ctx context.Context, ID string) (models.Order, error) {
+	o, err := s.repo.GetByID(ctx, ID)
+	if err != nil {
+		if err == mongo.ErrNoDocuments {
+			s.l.Warnf(ctx, "internal.order.service.GetByID: %v", order.ErrOrderNotFound)
+			return models.Order{}, order.ErrOrderNotFound
+		}
+		s.l.Errorf(ctx, "internal.order.service.GetByID.repo.GetByID:%v", err)
+		return models.Order{}, err
+	}
+
+	return o, nil
+}
+
+func (s *implService) GetOne(ctx context.Context, in order.GetOneOrderInput) (models.Order, error) {
+	o, err := s.repo.GetOne(ctx, repo.GetOneOrderOption(in))
+	if err != nil {
+		if err == mongo.ErrNoDocuments {
+			s.l.Warnf(ctx, "internal.order.service.GetOne: %v", order.ErrOrderNotFound)
+			return models.Order{}, order.ErrOrderNotFound
+		}
+		s.l.Errorf(ctx, "internal.order.service.GetOne.repo.GetOne:%v", err)
+		return models.Order{}, err
+	}
+
+	return o, nil
+}
+
+func (s *implService) List(ctx context.Context, in order.ListOrderInput) ([]models.Order, error) {
+	os, err := s.repo.List(ctx, repo.ListOrderOption(in))
+	if err != nil {
+		s.l.Errorf(ctx, "internal.order.service.List.repo.List: %v", err)
+		return nil, err
+	}
+
+	return os, nil
 }

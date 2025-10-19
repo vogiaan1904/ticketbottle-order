@@ -1,4 +1,4 @@
-package service
+package order
 
 type HandlePaymentCompletedInput struct {
 	OrderCode string

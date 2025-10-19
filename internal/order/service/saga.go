@@ -14,7 +14,7 @@ func (s *implService) compensate(ctx context.Context, saga *SagaCompensation) {
 	}
 
 	if saga.CreatedOrder != nil {
-		if err := s.deleteOrder(ctx, saga.CreatedOrder.ID.Hex()); err != nil {
+		if err := s.delete(ctx, saga.CreatedOrder.ID.Hex()); err != nil {
 			s.l.Errorf(ctx, "Failed to delete order during rollback: %v", err)
 		}
 	}

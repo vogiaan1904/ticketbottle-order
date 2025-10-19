@@ -9,6 +9,7 @@ var (
 	ErrOrderCreationFailed     = errors.New("order creation failed")
 	ErrOrderUpdateFailed       = errors.New("order update failed")
 	ErrOrderCancellationFailed = errors.New("order cancellation failed")
+	ErrOrderNotPending         = errors.New("order is not in pending status")
 	ErrPaymentAmountMismatch   = errors.New("payment amount does not match order amount")
 
 	ErrEventNotFound        = errors.New("event not found")

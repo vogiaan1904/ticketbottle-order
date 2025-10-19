@@ -1,6 +1,9 @@
-package service
+package order
 
-import "github.com/vogiaan1904/ticketbottle-order/internal/models"
+import (
+	"github.com/vogiaan1904/ticketbottle-order/internal/models"
+	"github.com/vogiaan1904/ticketbottle-order/pkg/paginator"
+)
 
 type CreateOrderInput struct {
 	CheckoutToken string
@@ -25,10 +28,29 @@ type OrderItemInput struct {
 	Quantity      int32
 }
 
-type SagaCompensation struct {
-	CreatedOrder    *models.Order
-	ItemsCreated    bool
-	TicketsReserved bool
+type FilterOrder struct {
+	Code    string
+	UserID  string
+	EventID string
+	Status  *models.OrderStatus
+}
+
+type GetManyOrderInput struct {
+	FilterOrder
+	Pag paginator.PaginatorQuery
+}
+
+type GetManyOrderOutput struct {
+	Orders []models.Order
+	Pag    paginator.Paginator
+}
+
+type ListOrderInput struct {
+	FilterOrder
+}
+
+type GetOneOrderInput struct {
+	FilterOrder
 }
 
 type ReservedTicket struct {

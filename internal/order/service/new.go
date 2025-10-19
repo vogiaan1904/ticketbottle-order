@@ -1,6 +1,7 @@
 package service
 
 import (
+	"github.com/vogiaan1904/ticketbottle-order/internal/order"
 	"github.com/vogiaan1904/ticketbottle-order/internal/order/delivery/kafka/producer"
 	repo "github.com/vogiaan1904/ticketbottle-order/internal/order/repository"
 	"github.com/vogiaan1904/ticketbottle-order/pkg/grpc/event"
@@ -25,7 +26,7 @@ type implService struct {
 	pmtSvc payment.PaymentServiceClient
 }
 
-func New(l logger.Logger, cfg Config, repo repo.Repository, invSvc inventory.InventoryServiceClient, evSvc event.EventServiceClient, pmtSvc payment.PaymentServiceClient, prod producer.Producer) Service {
+func New(l logger.Logger, cfg Config, repo repo.Repository, invSvc inventory.InventoryServiceClient, evSvc event.EventServiceClient, pmtSvc payment.PaymentServiceClient, prod producer.Producer) order.Service {
 	return &implService{
 		l:      l,
 		cfg:    cfg,

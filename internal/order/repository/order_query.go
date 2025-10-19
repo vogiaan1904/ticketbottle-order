@@ -3,30 +3,45 @@ package repository
 import (
 	"context"
 
+	"github.com/vogiaan1904/ticketbottle-order/internal/order"
 	"github.com/vogiaan1904/ticketbottle-order/pkg/mongo"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
 func (r *implRepository) buildGetByIDQuery(ctx context.Context, ID string) (bson.M, error) {
-	fil := bson.M{}
-	fil = mongo.BuildQueryWithSoftDelete(fil)
+	q := bson.M{}
+	q = mongo.BuildQueryWithSoftDelete(q)
 
 	objID, err := primitive.ObjectIDFromHex(ID)
 	if err != nil {
 		r.l.Errorf(ctx, "order.repository.OrderRepository.buildGetByIDQuery: %v", err)
 		return nil, err
 	}
-	fil["_id"] = objID
+	q["_id"] = objID
 
-	return fil, nil
+	return q, nil
 }
 
-func (r *implRepository) buildGetByCodeQuery(ctx context.Context, code string) bson.M {
-	fil := bson.M{}
-	fil = mongo.BuildQueryWithSoftDelete(fil)
+func (r *implRepository) buildFilterQuery(ctx context.Context, fil order.FilterOrder) bson.M {
+	q := bson.M{}
+	q = mongo.BuildQueryWithSoftDelete(q)
 
-	fil["code"] = code
+	if fil.Code != "" {
+		q["code"] = fil.Code
+	}
 
-	return fil
+	if fil.UserID != "" {
+		q["user_id"] = fil.UserID
+	}
+
+	if fil.EventID != "" {
+		q["event_id"] = fil.EventID
+	}
+
+	if fil.Status != nil {
+		q["status"] = *fil.Status
+	}
+
+	return q
 }

@@ -4,6 +4,8 @@ import (
 	"time"
 
 	"github.com/vogiaan1904/ticketbottle-order/internal/models"
+	"github.com/vogiaan1904/ticketbottle-order/internal/order"
+	"github.com/vogiaan1904/ticketbottle-order/pkg/paginator"
 )
 
 type CreateOrderOption struct {
@@ -22,4 +24,17 @@ type UpdateOrderOption struct {
 	Model  models.Order
 	Status models.OrderStatus
 	PaidAt *time.Time
+}
+
+type GetManyOrderOption struct {
+	order.FilterOrder
+	Pag paginator.PaginatorQuery
+}
+
+type ListOrderOption struct {
+	order.FilterOrder
+}
+
+type GetOneOrderOption struct {
+	order.FilterOrder
 }

@@ -962,7 +962,7 @@ func (x *ListOrdersResponse) GetOrders() []*Order {
 
 type CancelOrderRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	Code          string                 `protobuf:"bytes,1,opt,name=code,proto3" json:"code,omitempty"`
+	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -997,9 +997,9 @@ func (*CancelOrderRequest) Descriptor() ([]byte, []int) {
 	return file_order_proto_rawDescGZIP(), []int{13}
 }
 
-func (x *CancelOrderRequest) GetCode() string {
+func (x *CancelOrderRequest) GetId() string {
 	if x != nil {
-		return x.Code
+		return x.Id
 	}
 	return ""
 }
@@ -1086,9 +1086,9 @@ const file_order_proto_rawDesc = "" +
 	"\x06filter\x18\x01 \x01(\v2\x12.order.OrderFilterH\x00R\x06filter\x88\x01\x01B\t\n" +
 	"\a_filter\":\n" +
 	"\x12ListOrdersResponse\x12$\n" +
-	"\x06orders\x18\x01 \x03(\v2\f.order.OrderR\x06orders\"(\n" +
-	"\x12CancelOrderRequest\x12\x12\n" +
-	"\x04code\x18\x01 \x01(\tR\x04code*\x95\x01\n" +
+	"\x06orders\x18\x01 \x03(\v2\f.order.OrderR\x06orders\"$\n" +
+	"\x12CancelOrderRequest\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id*\x95\x01\n" +
 	"\vOrderStatus\x12\x1c\n" +
 	"\x18ORDER_STATUS_UNSPECIFIED\x10\x00\x12\x18\n" +
 	"\x14ORDER_STATUS_PENDING\x10\x01\x12\x1a\n" +

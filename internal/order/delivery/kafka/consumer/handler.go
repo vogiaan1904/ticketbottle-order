@@ -5,8 +5,8 @@ import (
 	"encoding/json"
 
 	"github.com/IBM/sarama"
+	"github.com/vogiaan1904/ticketbottle-order/internal/order"
 	"github.com/vogiaan1904/ticketbottle-order/internal/order/delivery/kafka"
-	"github.com/vogiaan1904/ticketbottle-order/internal/order/service"
 )
 
 func (c *Consumer) HandlePaymentCompleted(ctx context.Context, msg *sarama.ConsumerMessage) error {
@@ -18,7 +18,7 @@ func (c *Consumer) HandlePaymentCompleted(ctx context.Context, msg *sarama.Consu
 		return err
 	}
 
-	if err := c.svc.HandlePaymentCompleted(ctx, service.HandlePaymentCompletedInput{
+	if err := c.svc.HandlePaymentCompleted(ctx, order.HandlePaymentCompletedInput{
 		OrderCode: e.OrderCode,
 	}); err != nil {
 		c.l.Error(ctx, "delivery.kafka.consumer.handlers.HandlePaymentCompleted: %v", err)
@@ -37,7 +37,7 @@ func (c *Consumer) HandlePaymentFailed(ctx context.Context, msg *sarama.Consumer
 		return err
 	}
 
-	if err := c.svc.HandlePaymentFailed(ctx, service.HandlePaymentFailedInput{
+	if err := c.svc.HandlePaymentFailed(ctx, order.HandlePaymentFailedInput{
 		OrderCode: e.OrderCode,
 	}); err != nil {
 		c.l.Error(ctx, "delivery.kafka.consumer.handlers.HandlePaymentFailed: %v", err)

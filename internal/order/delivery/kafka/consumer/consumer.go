@@ -5,21 +5,21 @@ import (
 	"sync"
 
 	"github.com/IBM/sarama"
+	"github.com/vogiaan1904/ticketbottle-order/internal/order"
 	"github.com/vogiaan1904/ticketbottle-order/internal/order/delivery/kafka"
-	"github.com/vogiaan1904/ticketbottle-order/internal/order/service"
 	"github.com/vogiaan1904/ticketbottle-order/pkg/logger"
 )
 
 type Consumer struct {
 	consGr sarama.ConsumerGroup
-	svc    service.Service
+	svc    order.Service
 	l      logger.Logger
 	wg     sync.WaitGroup
 }
 
 func NewConsumer(
 	consGr sarama.ConsumerGroup,
-	svc service.Service,
+	svc order.Service,
 	l logger.Logger,
 ) *Consumer {
 	return &Consumer{
