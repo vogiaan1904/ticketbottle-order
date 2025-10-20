@@ -9,7 +9,7 @@ const (
 
 // PaginatorQuery is a struct that contains the page and limit of a request.
 type PaginatorQuery struct {
-	Page        int   `json:"page" form:"page"`
+	Page        int32 `json:"page" form:"page"`
 	Limit       int64 `json:"limit" form:"limit"`
 	ShiftOffset int64
 }
@@ -35,19 +35,19 @@ func (p *PaginatorQuery) Offset() int64 {
 }
 
 type Paginator struct {
-	Total       int64
-	Count       int64
-	PerPage     int64
-	CurrentPage int
+	Total    int64
+	Count    int64
+	PageSize int64
+	Page     int32
 }
 
 // TotalPages returns the total pages of the paginator.
-func (p Paginator) TotalPages() int {
+func (p Paginator) LastPage() int32 {
 	if p.Total == 0 {
 		return 0
 	}
 
-	return int(math.Ceil(float64(p.Total) / float64(p.PerPage)))
+	return int32(math.Ceil(float64(p.Total) / float64(p.PageSize)))
 }
 
 // ToResponse converts the paginator to a response.
@@ -55,17 +55,21 @@ func (p Paginator) ToResponse() PaginatorResponse {
 	return PaginatorResponse{
 		Total:       p.Total,
 		Count:       p.Count,
-		PerPage:     p.PerPage,
-		CurrentPage: p.CurrentPage,
-		TotalPages:  p.TotalPages(),
+		PageSize:    p.PageSize,
+		Page:        p.Page,
+		LastPage:    p.LastPage(),
+		HasNext:     p.Page < p.LastPage(),
+		HasPrevious: p.Page > 1,
 	}
 }
 
 // PaginatorResponse is a struct that contains the response of a paginator.
 type PaginatorResponse struct {
 	Total       int64 `json:"total"`
+	Page        int32 `json:"page"`
+	PageSize    int64 `json:"page_size"`
 	Count       int64 `json:"count"`
-	PerPage     int64 `json:"per_page"`
-	CurrentPage int   `json:"current_page"`
-	TotalPages  int   `json:"total_pages"`
+	LastPage    int32 `json:"last_page"`
+	HasNext     bool  `json:"has_next"`
+	HasPrevious bool  `json:"has_previous"`
 }

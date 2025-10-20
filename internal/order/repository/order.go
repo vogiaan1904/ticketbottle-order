@@ -170,10 +170,10 @@ func (r *implRepository) GetMany(ctx context.Context, opt GetManyOrderOption) ([
 	}
 
 	return os, paginator.Paginator{
-		Total:       total,
-		Count:       int64(len(os)),
-		PerPage:     opt.Pag.Limit,
-		CurrentPage: opt.Pag.Page,
+		Total:    total,
+		Count:    int64(len(os)),
+		PageSize: opt.Pag.Limit,
+		Page:     opt.Pag.Page,
 	}, nil
 
 }

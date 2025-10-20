@@ -7,13 +7,12 @@
 package order
 
 import (
-	reflect "reflect"
-	sync "sync"
-	unsafe "unsafe"
-
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 	emptypb "google.golang.org/protobuf/types/known/emptypb"
+	reflect "reflect"
+	sync "sync"
+	unsafe "unsafe"
 )
 
 const (
@@ -493,9 +492,10 @@ func (x *CreateOrderResponse) GetRedirectUrl() string {
 type PaginationInfo struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Page          int32                  `protobuf:"varint,1,opt,name=page,proto3" json:"page,omitempty"`
-	PageSize      int32                  `protobuf:"varint,2,opt,name=page_size,json=pageSize,proto3" json:"page_size,omitempty"`
-	Count         int32                  `protobuf:"varint,3,opt,name=count,proto3" json:"count,omitempty"`
+	PageSize      int64                  `protobuf:"varint,2,opt,name=page_size,json=pageSize,proto3" json:"page_size,omitempty"`
+	Count         int64                  `protobuf:"varint,3,opt,name=count,proto3" json:"count,omitempty"`
 	LastPage      int32                  `protobuf:"varint,4,opt,name=last_page,json=lastPage,proto3" json:"last_page,omitempty"`
+	Total         int64                  `protobuf:"varint,7,opt,name=total,proto3" json:"total,omitempty"`
 	HasNext       bool                   `protobuf:"varint,5,opt,name=has_next,json=hasNext,proto3" json:"has_next,omitempty"`
 	HasPrevious   bool                   `protobuf:"varint,6,opt,name=has_previous,json=hasPrevious,proto3" json:"has_previous,omitempty"`
 	unknownFields protoimpl.UnknownFields
@@ -539,14 +539,14 @@ func (x *PaginationInfo) GetPage() int32 {
 	return 0
 }
 
-func (x *PaginationInfo) GetPageSize() int32 {
+func (x *PaginationInfo) GetPageSize() int64 {
 	if x != nil {
 		return x.PageSize
 	}
 	return 0
 }
 
-func (x *PaginationInfo) GetCount() int32 {
+func (x *PaginationInfo) GetCount() int64 {
 	if x != nil {
 		return x.Count
 	}
@@ -556,6 +556,13 @@ func (x *PaginationInfo) GetCount() int32 {
 func (x *PaginationInfo) GetLastPage() int32 {
 	if x != nil {
 		return x.LastPage
+	}
+	return 0
+}
+
+func (x *PaginationInfo) GetTotal() int64 {
+	if x != nil {
+		return x.Total
 	}
 	return 0
 }
@@ -577,7 +584,7 @@ func (x *PaginationInfo) GetHasPrevious() bool {
 type GetManyOrdersRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Page          int32                  `protobuf:"varint,1,opt,name=page,proto3" json:"page,omitempty"`
-	PageSize      int32                  `protobuf:"varint,2,opt,name=page_size,json=pageSize,proto3" json:"page_size,omitempty"`
+	PageSize      int64                  `protobuf:"varint,2,opt,name=page_size,json=pageSize,proto3" json:"page_size,omitempty"`
 	Filter        *OrderFilter           `protobuf:"bytes,3,opt,name=filter,proto3,oneof" json:"filter,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -620,7 +627,7 @@ func (x *GetManyOrdersRequest) GetPage() int32 {
 	return 0
 }
 
-func (x *GetManyOrdersRequest) GetPageSize() int32 {
+func (x *GetManyOrdersRequest) GetPageSize() int64 {
 	if x != nil {
 		return x.PageSize
 	}
@@ -1050,17 +1057,18 @@ const file_order_proto_rawDesc = "" +
 	"\bcurrency\x18\x04 \x01(\tR\bcurrency\"\\\n" +
 	"\x13CreateOrderResponse\x12\"\n" +
 	"\x05order\x18\x01 \x01(\v2\f.order.OrderR\x05order\x12!\n" +
-	"\fredirect_url\x18\x02 \x01(\tR\vredirectUrl\"\xb2\x01\n" +
+	"\fredirect_url\x18\x02 \x01(\tR\vredirectUrl\"\xc8\x01\n" +
 	"\x0ePaginationInfo\x12\x12\n" +
 	"\x04page\x18\x01 \x01(\x05R\x04page\x12\x1b\n" +
-	"\tpage_size\x18\x02 \x01(\x05R\bpageSize\x12\x14\n" +
-	"\x05count\x18\x03 \x01(\x05R\x05count\x12\x1b\n" +
-	"\tlast_page\x18\x04 \x01(\x05R\blastPage\x12\x19\n" +
+	"\tpage_size\x18\x02 \x01(\x03R\bpageSize\x12\x14\n" +
+	"\x05count\x18\x03 \x01(\x03R\x05count\x12\x1b\n" +
+	"\tlast_page\x18\x04 \x01(\x05R\blastPage\x12\x14\n" +
+	"\x05total\x18\a \x01(\x03R\x05total\x12\x19\n" +
 	"\bhas_next\x18\x05 \x01(\bR\ahasNext\x12!\n" +
 	"\fhas_previous\x18\x06 \x01(\bR\vhasPrevious\"\x83\x01\n" +
 	"\x14GetManyOrdersRequest\x12\x12\n" +
 	"\x04page\x18\x01 \x01(\x05R\x04page\x12\x1b\n" +
-	"\tpage_size\x18\x02 \x01(\x05R\bpageSize\x12/\n" +
+	"\tpage_size\x18\x02 \x01(\x03R\bpageSize\x12/\n" +
 	"\x06filter\x18\x03 \x01(\v2\x12.order.OrderFilterH\x00R\x06filter\x88\x01\x01B\t\n" +
 	"\a_filter\"\xa0\x01\n" +
 	"\vOrderFilter\x12\x1c\n" +

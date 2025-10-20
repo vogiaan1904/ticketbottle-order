@@ -55,3 +55,73 @@ func (s *grpcService) newCreateResponses(out order.CreateOrderOutput) *orderpb.C
 		RedirectUrl: out.RedirectUrl,
 	}
 }
+
+func (s *grpcService) newGetManyOrderResponse(out order.GetManyOrderOutput) *orderpb.GetManyOrdersResponse {
+	os := make([]*orderpb.Order, len(out.Orders))
+	for i, o := range out.Orders {
+		os[i] = s.newOrderResponse(o)
+	}
+
+	pagResp := out.Pag.ToResponse()
+	return &orderpb.GetManyOrdersResponse{
+		Orders: os,
+		Pagination: &orderpb.PaginationInfo{
+			Page:        pagResp.Page,
+			PageSize:    pagResp.PageSize,
+			Total:       pagResp.Total,
+			Count:       pagResp.Count,
+			LastPage:    pagResp.LastPage,
+			HasNext:     pagResp.HasNext,
+			HasPrevious: pagResp.HasPrevious,
+		},
+	}
+}
+
+func (s *grpcService) newOrderResponse(o models.Order) *orderpb.Order {
+	return &orderpb.Order{
+		Id:               o.ID.Hex(),
+		Code:             o.Code,
+		UserId:           o.UserID,
+		EventId:          o.EventID,
+		UserFullname:     o.UserFullName,
+		UserEmail:        o.Email,
+		TotalAmountCents: o.TotalAmount,
+		Currency:         o.Currency,
+		PaymentMethod:    string(o.PaymentMethod),
+		Status:           GrpcOrderStatusValue[o.Status],
+		CreatedAt:        o.CreatedAt.String(),
+		UpdatedAt:        o.UpdatedAt.String(),
+	}
+}
+
+func (s *grpcService) newListOrderResponse(os []models.Order) *orderpb.ListOrdersResponse {
+	pbos := make([]*orderpb.Order, len(os))
+	for i, o := range os {
+		pbos[i] = s.newOrderResponse(o)
+	}
+
+	return &orderpb.ListOrdersResponse{
+		Orders: pbos,
+	}
+}
+
+func (s *grpcService) newGetOrderResponse(o models.Order) *orderpb.GetOrderResponse {
+	return &orderpb.GetOrderResponse{
+		Order: s.newOrderResponse(o),
+	}
+}
+
+func (s *grpcService) newOrderFilter(reqFil *orderpb.OrderFilter) order.FilterOrder {
+	fil := order.FilterOrder{}
+
+	if reqFil != nil {
+		fil.UserID = reqFil.GetUserId()
+		fil.EventID = reqFil.GetEventId()
+		if reqFil.GetStatus() != 0 {
+			stt := OrderStatus[reqFil.GetStatus()]
+			fil.Status = &stt
+		}
+	}
+
+	return fil
+}

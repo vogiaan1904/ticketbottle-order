@@ -6,19 +6,19 @@ import (
 	"github.com/vogiaan1904/ticketbottle-order/pkg/paginator"
 )
 
-func BuildPagingMeta(page int, limit int64, total int64) paginator.Paginator {
+func BuildPagingMeta(page int32, limit int64, total int64) paginator.Paginator {
 	if page < 1 {
 		page = 1
 	}
 	if limit < 1 {
 		limit = 15
 	}
-	perPage := limit
+	pageSize := limit
 	currentPage := page
 	if currentPage == 0 {
 		currentPage = 1
 	}
-	if currentPage > int(math.Ceil(float64(total)/float64(perPage))) {
+	if currentPage > int32(math.Ceil(float64(total)/float64(pageSize))) {
 		currentPage = 1
 	}
 
@@ -33,9 +33,9 @@ func BuildPagingMeta(page int, limit int64, total int64) paginator.Paginator {
 		}
 	}
 	return paginator.Paginator{
-		Total:       total,
-		Count:       count,
-		PerPage:     perPage,
-		CurrentPage: int(currentPage),
+		Total:    total,
+		Count:    count,
+		PageSize: pageSize,
+		Page:     currentPage,
 	}
 }
