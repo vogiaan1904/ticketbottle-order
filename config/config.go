@@ -83,17 +83,9 @@ func Load() (*Config, error) {
 
 			PaymentTimeoutSeconds: int32(getEnvAsInt("PAYMENT_TIMEOUT_SECONDS", 600)),
 		},
-		Redis: RedisConfig{
-			Addr:         getEnv("REDIS_ADDR", "localhost:6379"),
-			Password:     getEnv("REDIS_PASSWORD", ""),
-			DB:           getEnvAsInt("REDIS_DB", 0),
-			MaxRetries:   getEnvAsInt("REDIS_MAX_RETRIES", 3),
-			PoolSize:     getEnvAsInt("REDIS_POOL_SIZE", 10),
-			MinIdleConns: getEnvAsInt("REDIS_MIN_IDLE_CONNS", 5),
-		},
 		Mongo: MongoConfig{
 			URI:      getEnv("MONGO_URI", "mongodb://root:root@localhost:27017"),
-			Database: getEnv("MONGO_DATABASE", "ticketbottle-order"),
+			Database: getEnv("MONGO_DATABASE", "ticketbottle_order"),
 		},
 		JWT: JWTConfig{
 			Secret: getEnv("JWT_SECRET", "your-super-secret-key-change-in-production"),
@@ -113,8 +105,8 @@ func Load() (*Config, error) {
 		},
 		Microservice: MicroserviceConfig{
 			Event:     getEnv("EVENT_SERVICE_ADDR", "localhost:50053"),
-			Inventory: getEnv("INVENTORY_SERVICE_ADDR", "localhost:50052"),
-			Payment:   getEnv("PAYMENT_SERVICE_ADDR", "localhost:50051"),
+			Inventory: getEnv("INVENTORY_SERVICE_ADDR", "localhost:50057"),
+			Payment:   getEnv("PAYMENT_SERVICE_ADDR", "localhost:50055"),
 		},
 	}
 
@@ -128,10 +120,6 @@ func Load() (*Config, error) {
 func (c *Config) Validate() error {
 	if c.Server.GRpcPort <= 0 || c.Server.GRpcPort > 65535 {
 		return fmt.Errorf("invalid server port: %d", c.Server.GRpcPort)
-	}
-
-	if c.Redis.Addr == "" {
-		return fmt.Errorf("redis address is required")
 	}
 
 	if c.JWT.Secret == "" || c.JWT.Secret == "your-super-secret-key-change-in-production" {

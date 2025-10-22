@@ -155,7 +155,7 @@ func (mc *mongoCollection) DeleteMany(ctx context.Context, filter any) (int64, e
 
 func (mc *mongoCollection) DeleteSoftOne(ctx context.Context, filter any) (int64, error) {
 	update := bson.D{
-		{Key: "$set", Value: bson.D{
+		{Key: "$set", Value: bson.D{		
 			{Key: "deleted_at", Value: util.Now()},
 		}},
 	}

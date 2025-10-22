@@ -21,7 +21,6 @@ func (s *implService) Create(ctx context.Context, in order.CreateOrderInput) (or
 
 	wg := sync.WaitGroup{}
 	var wgErr error
-	wg.Add(2)
 
 	wg.Go(func() {
 		resp, err := s.evSvc.FindOne(ctx, &event.FindOneEventRequest{
@@ -144,9 +143,11 @@ func (s *implService) Create(ctx context.Context, in order.CreateOrderInput) (or
 	}()
 
 	code := util.GenerateOrderCodeWithEventPrefix(e.Name)
+	expAt := time.Now().Add(time.Duration(s.cfg.PaymentTimeoutSeconds) * time.Second)
 
 	_, err = s.invSvc.Reserve(ctx, &inventory.ReserveRequest{
 		OrderCode: code,
+		ExpiresAt: util.TimeToISO8601Str(expAt),
 		Items: func() []*inventory.ReserveItem {
 			itms := make([]*inventory.ReserveItem, len(in.Items))
 			for i, it := range in.Items {

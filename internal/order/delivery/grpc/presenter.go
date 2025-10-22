@@ -4,6 +4,7 @@ import (
 	"github.com/vogiaan1904/ticketbottle-order/internal/models"
 	"github.com/vogiaan1904/ticketbottle-order/internal/order"
 	orderpb "github.com/vogiaan1904/ticketbottle-order/pkg/grpc/order"
+	"github.com/vogiaan1904/ticketbottle-order/pkg/util"
 )
 
 var GrpcOrderStatusValue = map[models.OrderStatus]orderpb.OrderStatus{
@@ -45,8 +46,8 @@ func (s *grpcService) newCreateResponses(out order.CreateOrderOutput) *orderpb.C
 		Currency:         out.Order.Currency,
 		PaymentMethod:    string(out.Order.PaymentMethod),
 		Status:           GrpcOrderStatusValue[out.Order.Status],
-		CreatedAt:        out.Order.CreatedAt.String(),
-		UpdatedAt:        out.Order.UpdatedAt.String(),
+		CreatedAt:        util.TimeToISO8601Str(out.Order.CreatedAt),
+		UpdatedAt:        util.TimeToISO8601Str(out.Order.UpdatedAt),
 		Items:            s.newOrderItems(out.OrderItems),
 	}
 
@@ -89,8 +90,8 @@ func (s *grpcService) newOrderResponse(o models.Order) *orderpb.Order {
 		Currency:         o.Currency,
 		PaymentMethod:    string(o.PaymentMethod),
 		Status:           GrpcOrderStatusValue[o.Status],
-		CreatedAt:        o.CreatedAt.String(),
-		UpdatedAt:        o.UpdatedAt.String(),
+		CreatedAt:        util.TimeToISO8601Str(o.CreatedAt),
+		UpdatedAt:        util.TimeToISO8601Str(o.UpdatedAt),
 	}
 }
 

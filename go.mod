@@ -1,6 +1,6 @@
 module github.com/vogiaan1904/ticketbottle-order
 
-go 1.25.1
+go 1.25
 
 require (
 	github.com/IBM/sarama v1.46.1
