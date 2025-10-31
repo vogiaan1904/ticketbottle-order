@@ -347,6 +347,8 @@ type CreateOrderRequest struct {
 	PaymentMethod string                 `protobuf:"bytes,8,opt,name=payment_method,json=paymentMethod,proto3" json:"payment_method,omitempty"`
 	Items         []*CreateOrderItem     `protobuf:"bytes,3,rep,name=items,proto3" json:"items,omitempty"`
 	Currency      string                 `protobuf:"bytes,4,opt,name=currency,proto3" json:"currency,omitempty"`
+	CheckoutToken string                 `protobuf:"bytes,9,opt,name=checkout_token,json=checkoutToken,proto3" json:"checkout_token,omitempty"`
+	RedirectUrl   string                 `protobuf:"bytes,10,opt,name=redirect_url,json=redirectUrl,proto3" json:"redirect_url,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -437,10 +439,24 @@ func (x *CreateOrderRequest) GetCurrency() string {
 	return ""
 }
 
+func (x *CreateOrderRequest) GetCheckoutToken() string {
+	if x != nil {
+		return x.CheckoutToken
+	}
+	return ""
+}
+
+func (x *CreateOrderRequest) GetRedirectUrl() string {
+	if x != nil {
+		return x.RedirectUrl
+	}
+	return ""
+}
+
 type CreateOrderResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Order         *Order                 `protobuf:"bytes,1,opt,name=order,proto3" json:"order,omitempty"`
-	RedirectUrl   string                 `protobuf:"bytes,2,opt,name=redirect_url,json=redirectUrl,proto3" json:"redirect_url,omitempty"`
+	PaymentUrl    string                 `protobuf:"bytes,2,opt,name=payment_url,json=paymentUrl,proto3" json:"payment_url,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -482,9 +498,9 @@ func (x *CreateOrderResponse) GetOrder() *Order {
 	return nil
 }
 
-func (x *CreateOrderResponse) GetRedirectUrl() string {
+func (x *CreateOrderResponse) GetPaymentUrl() string {
 	if x != nil {
-		return x.RedirectUrl
+		return x.PaymentUrl
 	}
 	return ""
 }
@@ -1043,7 +1059,7 @@ const file_order_proto_rawDesc = "" +
 	"priceCents\"U\n" +
 	"\x0fCreateOrderItem\x12&\n" +
 	"\x0fticket_class_id\x18\x01 \x01(\tR\rticketClassId\x12\x1a\n" +
-	"\bquantity\x18\x02 \x01(\x05R\bquantity\"\x9c\x02\n" +
+	"\bquantity\x18\x02 \x01(\x05R\bquantity\"\xe6\x02\n" +
 	"\x12CreateOrderRequest\x12\x19\n" +
 	"\bevent_id\x18\x01 \x01(\tR\aeventId\x12\x17\n" +
 	"\auser_id\x18\x02 \x01(\tR\x06userId\x12#\n" +
@@ -1054,10 +1070,14 @@ const file_order_proto_rawDesc = "" +
 	"user_phone\x18\a \x01(\tR\tuserPhone\x12%\n" +
 	"\x0epayment_method\x18\b \x01(\tR\rpaymentMethod\x12,\n" +
 	"\x05items\x18\x03 \x03(\v2\x16.order.CreateOrderItemR\x05items\x12\x1a\n" +
-	"\bcurrency\x18\x04 \x01(\tR\bcurrency\"\\\n" +
+	"\bcurrency\x18\x04 \x01(\tR\bcurrency\x12%\n" +
+	"\x0echeckout_token\x18\t \x01(\tR\rcheckoutToken\x12!\n" +
+	"\fredirect_url\x18\n" +
+	" \x01(\tR\vredirectUrl\"Z\n" +
 	"\x13CreateOrderResponse\x12\"\n" +
-	"\x05order\x18\x01 \x01(\v2\f.order.OrderR\x05order\x12!\n" +
-	"\fredirect_url\x18\x02 \x01(\tR\vredirectUrl\"\xc8\x01\n" +
+	"\x05order\x18\x01 \x01(\v2\f.order.OrderR\x05order\x12\x1f\n" +
+	"\vpayment_url\x18\x02 \x01(\tR\n" +
+	"paymentUrl\"\xc8\x01\n" +
 	"\x0ePaginationInfo\x12\x12\n" +
 	"\x04page\x18\x01 \x01(\x05R\x04page\x12\x1b\n" +
 	"\tpage_size\x18\x02 \x01(\x03R\bpageSize\x12\x14\n" +

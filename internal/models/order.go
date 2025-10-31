@@ -13,6 +13,7 @@ type Order struct {
 	UserID        string             `bson:"user_id"`
 	UserFullName  string             `bson:"user_full_name"`
 	Email         string             `bson:"email"`
+	Phone         string             `bson:"phone"`
 	EventID       string             `bson:"event_id"`
 	TotalAmount   int64              `bson:"total_amount"`
 	Currency      string             `bson:"currency"`

@@ -19,6 +19,7 @@ type Config struct {
 	Log          LogConfig
 	Kafka        KafkaConfig
 	Microservice MicroserviceConfig
+	Temporal     TemporalConfig
 }
 
 type ServerConfig struct {
@@ -69,6 +70,12 @@ type LogConfig struct {
 	Encoding string
 }
 
+type TemporalConfig struct {
+	HostPort  string
+	Namespace string
+	TaskQueue string
+}
+
 func Load() (*Config, error) {
 	// Load .env file if exists
 	_ = godotenv.Load()
@@ -107,6 +114,10 @@ func Load() (*Config, error) {
 			Event:     getEnv("EVENT_SERVICE_ADDR", "localhost:50053"),
 			Inventory: getEnv("INVENTORY_SERVICE_ADDR", "localhost:50057"),
 			Payment:   getEnv("PAYMENT_SERVICE_ADDR", "localhost:50055"),
+		},
+		Temporal: TemporalConfig{
+			HostPort:  getEnv("TEMPORAL_HOST_PORT", "localhost:7233"),
+			Namespace: getEnv("TEMPORAL_NAMESPACE", "default"),
 		},
 	}
 

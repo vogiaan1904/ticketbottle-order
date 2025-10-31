@@ -8,6 +8,7 @@ import (
 	"syscall"
 
 	"github.com/vogiaan1904/ticketbottle-order/config"
+	"github.com/vogiaan1904/ticketbottle-order/internal/activities"
 	"github.com/vogiaan1904/ticketbottle-order/internal/infra/kafka"
 	"github.com/vogiaan1904/ticketbottle-order/internal/infra/mongo"
 	oCons "github.com/vogiaan1904/ticketbottle-order/internal/order/delivery/kafka/consumer"
@@ -18,6 +19,7 @@ import (
 	inSvc "github.com/vogiaan1904/ticketbottle-order/pkg/grpc/inventory"
 	pSvc "github.com/vogiaan1904/ticketbottle-order/pkg/grpc/payment"
 	pkgLog "github.com/vogiaan1904/ticketbottle-order/pkg/logger"
+	pkgTemporal "github.com/vogiaan1904/ticketbottle-order/pkg/temporal"
 )
 
 func main() {
@@ -86,10 +88,42 @@ func main() {
 	db := mCli.Database(cfg.Mongo.Database)
 	oRepo := oRepo.New(l, db)
 
+	// Initialize Temporal client
+	temporalClient, err := pkgTemporal.NewClient(pkgTemporal.Config{
+		HostPort:  cfg.Temporal.HostPort,
+		Namespace: cfg.Temporal.Namespace,
+	})
+	if err != nil {
+		l.Fatalf(ctx, "Failed to create Temporal client: %v", err)
+		os.Exit(1)
+	}
+	defer temporalClient.Close()
+
+	// Initialize Temporal worker
+	temporalWorker, err := pkgTemporal.NewWorker(temporalClient, cfg.Temporal.TaskQueue, pkgTemporal.WorkerDependencies{
+		OrderActivities:     activities.NewOrderActivities(oRepo),
+		PaymentActivities:   activities.NewPaymentActivities(pmtSvcCli),
+		InventoryActivities: activities.NewInventoryActivities(inSvcCli),
+		EventActivities:     activities.NewEventActivities(eSvcCli),
+	})
+	if err != nil {
+		l.Fatalf(ctx, "Failed to create Temporal worker: %v", err)
+		os.Exit(1)
+	}
+
+	// Start Temporal worker
+	go func() {
+		l.Infof(ctx, "Starting Temporal worker on task queue: %s", cfg.Temporal.TaskQueue)
+		if err := temporalWorker.Run(nil); err != nil {
+			l.Fatalf(ctx, "Temporal worker failed: %v", err)
+		}
+	}()
+
 	// Initialize services
 	oSvc := oSvc.New(l, oSvc.Config{
 		PaymentTimeoutSeconds: int32(cfg.Server.PaymentTimeoutSeconds),
-	}, oRepo, inSvcCli, eSvcCli, pmtSvcCli, oProd)
+		TemporalTaskQueue:     cfg.Temporal.TaskQueue,
+	}, oRepo, inSvcCli, eSvcCli, pmtSvcCli, oProd, temporalClient)
 
 	// Create consumer
 	cons := oCons.NewConsumer(kConsGr, oSvc, l)
@@ -105,6 +139,9 @@ func main() {
 	<-quit
 
 	l.Info(ctx, "Consumer Server shutting down...")
+
+	// Stop Temporal worker
+	temporalWorker.Stop()
 
 	cancel()
 

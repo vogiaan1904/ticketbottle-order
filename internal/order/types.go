@@ -8,8 +8,9 @@ import (
 type CreateOrderInput struct {
 	CheckoutToken string
 	UserID        string
-	Email         string
 	UserFullName  string
+	Email         string
+	Phone         string
 	EventID       string
 	Currency      string
 	RedirectUrl   string
@@ -18,9 +19,9 @@ type CreateOrderInput struct {
 }
 
 type CreateOrderOutput struct {
-	Order       models.Order
-	OrderItems  []models.OrderItem
-	RedirectUrl string
+	Order      models.Order
+	OrderItems []models.OrderItem
+	PaymentUrl string
 }
 
 type OrderItemInput struct {

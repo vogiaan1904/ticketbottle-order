@@ -38,6 +38,7 @@ func (s *grpcService) CreateOrder(ctx context.Context, req *orderpb.CreateOrderR
 		Email:         req.UserEmail,
 		Currency:      req.Currency,
 		PaymentMethod: models.PaymentMethod(req.PaymentMethod),
+		RedirectUrl:   req.RedirectUrl,
 	}
 
 	itms := make([]order.OrderItemInput, len(req.Items))

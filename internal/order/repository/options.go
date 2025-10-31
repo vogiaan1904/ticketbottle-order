@@ -14,6 +14,7 @@ type CreateOrderOption struct {
 	UserID       string
 	UserFullName string
 	Email        string
+	Phone        string
 	EventID      string
 	TotalAmount  int64
 	Currency     string

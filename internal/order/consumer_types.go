@@ -6,4 +6,5 @@ type HandlePaymentCompletedInput struct {
 
 type HandlePaymentFailedInput struct {
 	OrderCode string
+	Reason    string
 }

@@ -23,11 +23,11 @@ var OrderStatus = map[orderpb.OrderStatus]models.OrderStatus{
 
 func (s *grpcService) newOrderItems(itms []models.OrderItem) []*orderpb.OrderItem {
 	pbItems := make([]*orderpb.OrderItem, len(itms))
-	for i, item := range itms {
+	for i, itm := range itms {
 		pbItems[i] = &orderpb.OrderItem{
-			TicketClassId: item.TicketClassID,
-			Quantity:      item.Quantity,
-			PriceCents:    item.TotalAmount,
+			TicketClassId: itm.TicketClassID,
+			Quantity:      itm.Quantity,
+			PriceCents:    itm.TotalAmount,
 		}
 	}
 
@@ -52,8 +52,8 @@ func (s *grpcService) newCreateResponses(out order.CreateOrderOutput) *orderpb.C
 	}
 
 	return &orderpb.CreateOrderResponse{
-		Order:       ord,
-		RedirectUrl: out.RedirectUrl,
+		Order:      ord,
+		PaymentUrl: out.PaymentUrl,
 	}
 }
 

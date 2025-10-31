@@ -44,7 +44,7 @@ RUN CONFIG="\
 RUN apk add --no-cache ca-certificates && update-ca-certificates
 
 # Set the timezone.
-ENV TZ=Asia/Ho_Chi_Minh
+ENV TZ=UTC
 RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
 
 WORKDIR /app

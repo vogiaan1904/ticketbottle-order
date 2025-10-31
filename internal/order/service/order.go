@@ -8,11 +8,12 @@ import (
 	"github.com/vogiaan1904/ticketbottle-order/internal/models"
 	"github.com/vogiaan1904/ticketbottle-order/internal/order"
 	repo "github.com/vogiaan1904/ticketbottle-order/internal/order/repository"
+	ordWf "github.com/vogiaan1904/ticketbottle-order/internal/workflows/order"
 	"github.com/vogiaan1904/ticketbottle-order/pkg/grpc/event"
 	"github.com/vogiaan1904/ticketbottle-order/pkg/grpc/inventory"
-	"github.com/vogiaan1904/ticketbottle-order/pkg/grpc/payment"
 	"github.com/vogiaan1904/ticketbottle-order/pkg/mongo"
 	"github.com/vogiaan1904/ticketbottle-order/pkg/util"
+	"go.temporal.io/sdk/client"
 )
 
 func (s *implService) Create(ctx context.Context, in order.CreateOrderInput) (order.CreateOrderOutput, error) {
@@ -103,13 +104,13 @@ func (s *implService) Create(ctx context.Context, in order.CreateOrderInput) (or
 		return order.CreateOrderOutput{}, err
 	}
 
-	if tcResp == nil || len(tcResp.TicketClasses) == 0 {
+	if tcResp == nil || tcResp.GetTicketClasses() == nil || len(tcResp.GetTicketClasses()) == 0 {
 		s.l.Errorf(ctx, "internal.order.service.Create: %v", in.EventID)
 		return order.CreateOrderOutput{}, order.ErrTicketClassNotFound
 	}
 
-	for _, tc := range tcResp.TicketClasses {
-		tcMap[tc.Id] = tc
+	for _, tc := range tcResp.GetTicketClasses() {
+		tcMap[tc.GetId()] = tc
 	}
 
 	resp, err := s.invSvc.CheckAvailability(ctx, &inventory.CheckAvailabilityRequest{
@@ -134,97 +135,86 @@ func (s *implService) Create(ctx context.Context, in order.CreateOrderInput) (or
 		return order.CreateOrderOutput{}, order.ErrNotEnoughTickets
 	}
 
-	saga := &SagaCompensation{}
-	defer func() {
-		if r := recover(); r != nil {
-			s.compensate(ctx, saga)
-			panic(r)
-		}
-	}()
-
-	code := util.GenerateOrderCodeWithEventPrefix(e.Name)
-	expAt := time.Now().Add(time.Duration(s.cfg.PaymentTimeoutSeconds) * time.Second)
-
-	_, err = s.invSvc.Reserve(ctx, &inventory.ReserveRequest{
-		OrderCode: code,
-		ExpiresAt: util.TimeToISO8601Str(expAt),
-		Items: func() []*inventory.ReserveItem {
-			itms := make([]*inventory.ReserveItem, len(in.Items))
-			for i, it := range in.Items {
-				itms[i] = &inventory.ReserveItem{
-					TicketClassId: it.TicketClassID,
-					Quantity:      it.Quantity,
-				}
-			}
-			return itms
-		}(),
-	})
-	if err != nil {
-		s.l.Errorf(ctx, "failed to reserve tickets: %v", err)
-		return order.CreateOrderOutput{}, err
-	}
-	saga.TicketsReserved = true
-
+	// Calculate total amount and prepare order items
 	amt := int64(0)
 	itmIns := make([]repo.CreateOrderItemOption, len(in.Items))
 
-	for _, i := range in.Items {
-		tc := tcMap[i.TicketClassID]
-		tt := tc.PriceCents * int64(i.Quantity)
+	for i, itm := range in.Items {
+		tc := tcMap[itm.TicketClassID]
+		tt := tc.PriceCents * int64(itm.Quantity)
 		amt += tt
-		itmIns = append(itmIns, repo.CreateOrderItemOption{
-			TicketClassID:   i.TicketClassID,
+		itmIns[i] = repo.CreateOrderItemOption{
+			TicketClassID:   itm.TicketClassID,
 			TicketClassName: tc.Name,
 			PriceAtPurchase: tc.PriceCents,
-			Quantity:        i.Quantity,
+			Quantity:        itm.Quantity,
 			TotalAmount:     tt,
-		})
+		}
 	}
+
+	// Generate order code and create order record
+	code := util.GenerateOrderCodeWithEventPrefix(e.Name)
 
 	o, err := s.repo.Create(ctx, repo.CreateOrderOption{
 		Code:         code,
 		UserID:       in.UserID,
 		Email:        in.Email,
+		Phone:        in.Phone,
 		UserFullName: in.UserFullName,
 		EventID:      in.EventID,
-		Currency:     "VND", // VND only for now
+		Currency:     "VND",
+		Status:       models.OrderStatusPending,
 		TotalAmount:  amt,
 	})
 	if err != nil {
-		s.releaseTickets(ctx, code)
 		s.l.Errorf(ctx, "failed to create order: %v", err)
 		return order.CreateOrderOutput{}, err
 	}
-	saga.CreatedOrder = &o
 
 	itms, err := s.repo.CreateManyItems(ctx, o.ID.Hex(), itmIns)
 	if err != nil {
-		s.releaseTickets(ctx, code)
 		s.delete(ctx, o.ID.Hex())
 		s.l.Errorf(ctx, "failed to create order items: %v", err)
 		return order.CreateOrderOutput{}, err
 	}
-	saga.ItemsCreated = true
 
-	pResp, err := s.pmtSvc.CreatePaymentIntent(ctx, &payment.CreatePaymentIntentRequest{
-		OrderCode:      o.Code,
-		AmountCents:    o.TotalAmount,
-		Currency:       "VND",
-		Provider:       payment.PaymentProvider(payment.PaymentProvider_value[string(in.PaymentMethod)]),
-		RedirectUrl:    in.RedirectUrl,
-		IdempotencyKey: generatePaymentIdempotencyKey(o.Code, string(in.PaymentMethod)),
-		TimeoutSeconds: s.cfg.PaymentTimeoutSeconds,
-	})
+	// Start Temporal workflow for order processing
+	wfOpts := client.StartWorkflowOptions{
+		ID:        "create-order-" + o.Code,
+		TaskQueue: s.cfg.TemporalTaskQueue,
+	}
+
+	// Prepare workflow parameters
+	wfParams := ordWf.CreateOrderWorkflowParams{
+		Order:           o,
+		Items:           itms,
+		PaymentProvider: string(in.PaymentMethod),
+		RedirectUrl:     in.RedirectUrl,
+		IdempotencyKey:  generatePaymentIdempotencyKey(o.Code, string(in.PaymentMethod)),
+		TimeoutSeconds:  s.cfg.PaymentTimeoutSeconds,
+	}
+
+	wfRun, err := s.temporal.ExecuteWorkflow(ctx, wfOpts, ordWf.ProcessCreateOrderWorkflow, wfParams)
 	if err != nil {
-		s.compensate(ctx, saga)
-		s.l.Errorf(ctx, "failed to create payment intent: %v", err)
+		s.l.Errorf(ctx, "failed to start pre-payment workflow: %v", err)
+		s.delete(ctx, o.ID.Hex())
+		return order.CreateOrderOutput{}, err
+	}
+
+	s.l.Infof(ctx, "Started pre-payment workflow for order %s, workflowID: %s, runID: %s", o.Code, wfRun.GetID(), wfRun.GetRunID())
+
+	// Get the workflow result (payment URL)
+	var wfRes ordWf.CreateOrderWorkflowResult
+	err = wfRun.Get(ctx, &wfRes)
+	if err != nil {
+		s.l.Errorf(ctx, "pre-payment workflow failed: %v", err)
 		return order.CreateOrderOutput{}, err
 	}
 
 	return order.CreateOrderOutput{
-		Order:       o,
-		OrderItems:  itms,
-		RedirectUrl: pResp.PaymentUrl,
+		Order:      o,
+		OrderItems: itms,
+		PaymentUrl: wfRes.PaymentUrl,
 	}, nil
 }
 
