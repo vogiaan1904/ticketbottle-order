@@ -19,9 +19,9 @@ import (
 	oKafka "github.com/vogiaan1904/ticketbottle-order/internal/order/delivery/kafka/producer"
 	oRepo "github.com/vogiaan1904/ticketbottle-order/internal/order/repository"
 	oSvc "github.com/vogiaan1904/ticketbottle-order/internal/order/service"
-	oWf "github.com/vogiaan1904/ticketbottle-order/internal/workflows/order"
+	"github.com/vogiaan1904/ticketbottle-order/internal/workflows"
 	eSvc "github.com/vogiaan1904/ticketbottle-order/pkg/grpc/event"
-	inSvc "github.com/vogiaan1904/ticketbottle-order/pkg/grpc/inventory"
+	iSvc "github.com/vogiaan1904/ticketbottle-order/pkg/grpc/inventory"
 	opb "github.com/vogiaan1904/ticketbottle-order/pkg/grpc/order"
 	pSvc "github.com/vogiaan1904/ticketbottle-order/pkg/grpc/payment"
 	pkgLog "github.com/vogiaan1904/ticketbottle-order/pkg/logger"
@@ -55,21 +55,21 @@ func main() {
 	db := mCli.Database(cfg.Mongo.Database)
 
 	// Initialize gRpc service clients
-	inSvcCli, invClose, err := inSvc.NewInventoryClient(cfg.Microservice.Inventory)
+	iSvc, iClose, err := iSvc.NewInventoryClient(cfg.Microservice.Inventory)
 	if err != nil {
 		l.Fatalf(ctx, "Failed to create inventory service client: %v", err)
 		os.Exit(1)
 	}
-	defer invClose()
+	defer iClose()
 
-	eSvcCli, eClose, err := eSvc.NewEventClient(cfg.Microservice.Event)
+	eSvc, eClose, err := eSvc.NewEventClient(cfg.Microservice.Event)
 	if err != nil {
 		l.Fatalf(ctx, "Failed to create event service client: %v", err)
 		os.Exit(1)
 	}
 	defer eClose()
 
-	pmtSvcCli, pClose, err := pSvc.NewPaymentClient(cfg.Microservice.Payment)
+	pSvc, pClose, err := pSvc.NewPaymentClient(cfg.Microservice.Payment)
 	if err != nil {
 		l.Fatalf(ctx, "Failed to create payment service client: %v", err)
 		os.Exit(1)
@@ -90,43 +90,38 @@ func main() {
 	oRepo := oRepo.New(l, db)
 
 	// Initialize Temporal client
-	temporalCli, err := pkgTemporal.NewClient(pkgTemporal.Config{
-		HostPort:  cfg.Temporal.HostPort,
-		Namespace: cfg.Temporal.Namespace,
-	})
+	tCli, err := pkgTemporal.NewClient(cfg.Temporal)
 	if err != nil {
 		l.Fatalf(ctx, "Failed to create Temporal client: %v", err)
 		os.Exit(1)
 	}
-	defer temporalCli.Close()
+	defer tCli.Close()
 
+	// Initialize activities
 	oActs := acts.NewOrderActivities(oRepo)
-	pmtActs := acts.NewPaymentActivities(pmtSvcCli)
-	invActs := acts.NewInventoryActivities(inSvcCli)
-	evActs := acts.NewEventActivities(eSvcCli)
+	pActs := acts.NewPaymentActivities(pSvc)
+	iActs := acts.NewInventoryActivities(iSvc)
 
-	createOrdWkr := temporal.NewCreateOrderWorker(temporalCli)
-	createOrdWkr.RegisterWorkflow(oWf.ProcessCreateOrderWorkflow)
-	createOrdWkr.RegisterActivity(oActs)
-	createOrdWkr.RegisterActivity(pmtActs)
-	createOrdWkr.RegisterActivity(invActs)
-	createOrdWkr.RegisterActivity(evActs)
+	w := temporal.NewOrderWorker(tCli, temporal.CreateOrderTaskQueue)
 
-	confirmOrdWkr := temporal.NewConfirmOrderWorker(temporalCli)
-	confirmOrdWkr.RegisterWorkflow(oWf.ProcessConfirmOrderWorkflow)
-	confirmOrdWkr.RegisterActivity(oActs)
-	confirmOrdWkr.RegisterActivity(pmtActs)
-	confirmOrdWkr.RegisterActivity(invActs)
-	confirmOrdWkr.RegisterActivity(evActs)
+	w.RegisterWorkflow(workflows.CreateOrder)
+	w.RegisterActivity(oActs)
+	w.RegisterActivity(pActs)
+	w.RegisterActivity(iActs)
+
+	// Start worker
+	go func() {
+		l.Infof(ctx, "Starting Temporal worker on task queue: %s", temporal.CreateOrderTaskQueue)
+		if err := w.Run(nil); err != nil {
+			l.Fatalf(ctx, "Temporal worker failed: %v", err)
+		}
+	}()
 
 	// Initialize services
-	oSvc := oSvc.New(l, oSvc.Config{
-		PaymentTimeoutSeconds: int32(cfg.Server.PaymentTimeoutSeconds),
-		TemporalTaskQueue:     cfg.Temporal.TaskQueue,
-	}, oRepo, inSvcCli, eSvcCli, pmtSvcCli, oProd, temporalCli)
+	oSvc := oSvc.New(l, oRepo, iSvc, eSvc, pSvc, oProd, tCli)
 
 	// Initialize gRpc services
-	oGrpcSvc := oGrpc.NewGrpcService(oSvc, l)
+	oGrpc := oGrpc.NewGrpcService(oSvc, l)
 
 	// Start gRpc server
 	lnr, err := net.Listen("tcp", fmt.Sprintf(":%d", cfg.Server.GRpcPort))
@@ -137,7 +132,7 @@ func main() {
 	gRpcSrv := grpc.NewServer(
 		grpc.UnaryInterceptor(interceptors.GrpcLoggingInterceptor(l)),
 	)
-	opb.RegisterOrderServiceServer(gRpcSrv, oGrpcSvc)
+	opb.RegisterOrderServiceServer(gRpcSrv, oGrpc)
 
 	go func() {
 		l.Infof(ctx, "gRPC server is listening on port: %d", cfg.Server.GRpcPort)
@@ -152,9 +147,7 @@ func main() {
 
 	l.Info(ctx, "Server shutting down...")
 
-	// Stop Temporal workers
-	createOrdWkr.Stop()
-	confirmOrdWkr.Stop()
+	w.Stop()
 
 	cancel()
 	time.Sleep(1 * time.Second)

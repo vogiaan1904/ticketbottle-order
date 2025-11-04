@@ -19,6 +19,24 @@ func NewOrderActivities(repo repo.Repository) *OrderActivities {
 	}
 }
 
+func (a *OrderActivities) CreateOrder(ctx context.Context, opt repo.CreateOrderOption) (*models.Order, error) {
+	o, err := a.Repo.Create(ctx, opt)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create order: %w", err)
+	}
+
+	return &o, nil
+}
+
+func (a *OrderActivities) CreateOrderItems(ctx context.Context, orderID string, items []repo.CreateOrderItemOption) ([]models.OrderItem, error) {
+	itms, err := a.Repo.CreateManyItems(ctx, orderID, items)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create order items: %w", err)
+	}
+
+	return itms, nil
+}
+
 func (a *OrderActivities) GetOrder(ctx context.Context, code string) (*models.Order, error) {
 	o, err := a.Repo.GetOne(ctx, repo.GetOneOrderOption{
 		FilterOrder: order.FilterOrder{

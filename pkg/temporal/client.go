@@ -3,16 +3,12 @@ package temporal
 import (
 	"fmt"
 
+	"github.com/vogiaan1904/ticketbottle-order/config"
 	"go.temporal.io/sdk/client"
 )
 
-type Config struct {
-	HostPort  string
-	Namespace string
-}
-
 // NewClient creates a new Temporal client
-func NewClient(cfg Config) (client.Client, error) {
+func NewClient(cfg config.TemporalConfig) (client.Client, error) {
 	c, err := client.Dial(client.Options{
 		HostPort:  cfg.HostPort,
 		Namespace: cfg.Namespace,

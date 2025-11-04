@@ -5,21 +5,10 @@ import (
 	"go.temporal.io/sdk/worker"
 )
 
-const (
-	CreateOrderTaskQueue  = "create-order-task-queue"
-	ConfirmOrderTaskQueue = "confirm-order-task-queue"
-)
-
-func NewCreateOrderWorker(tprCli client.Client) worker.Worker {
-	return worker.New(tprCli, CreateOrderTaskQueue, worker.Options{
+// NewOrderWorker creates a worker for order workflows with the specified task queue
+func NewOrderWorker(c client.Client, taskQueue string) worker.Worker {
+	return worker.New(c, taskQueue, worker.Options{
 		MaxConcurrentWorkflowTaskExecutionSize: 100,
 		MaxConcurrentActivityExecutionSize:     100,
-	})
-}
-
-func NewConfirmOrderWorker(tprCli client.Client) worker.Worker {
-	return worker.New(tprCli, ConfirmOrderTaskQueue, worker.Options{
-		MaxConcurrentWorkflowTaskExecutionSize: 50,
-		MaxConcurrentActivityExecutionSize:     50,
 	})
 }

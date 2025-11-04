@@ -19,7 +19,7 @@ type CreateOrderInput struct {
 }
 
 type CreateOrderOutput struct {
-	Order      models.Order
+	Order      *models.Order
 	OrderItems []models.OrderItem
 	PaymentUrl string
 }

@@ -12,14 +12,8 @@ import (
 	temporalCli "go.temporal.io/sdk/client"
 )
 
-type Config struct {
-	PaymentTimeoutSeconds int32
-	TemporalTaskQueue     string
-}
-
 type implService struct {
 	l        logger.Logger
-	cfg      Config
 	repo     repo.Repository
 	jwt      pkgJwt.Manager
 	prod     producer.Producer
@@ -29,10 +23,9 @@ type implService struct {
 	temporal temporalCli.Client
 }
 
-func New(l logger.Logger, cfg Config, repo repo.Repository, invSvc inventory.InventoryServiceClient, evSvc event.EventServiceClient, pmtSvc payment.PaymentServiceClient, prod producer.Producer, tprCli temporalCli.Client) order.Service {
+func New(l logger.Logger, repo repo.Repository, invSvc inventory.InventoryServiceClient, evSvc event.EventServiceClient, pmtSvc payment.PaymentServiceClient, prod producer.Producer, tprCli temporalCli.Client) order.Service {
 	return &implService{
 		l:        l,
-		cfg:      cfg,
 		repo:     repo,
 		invSvc:   invSvc,
 		evSvc:    evSvc,

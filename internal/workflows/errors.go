@@ -1,4 +1,4 @@
-package order
+package workflows
 
 import "errors"
 
@@ -9,4 +9,5 @@ var (
 	ErrPaymentFailed          = errors.New("payment processing failed")
 	ErrPaymentTimeout         = errors.New("payment timeout exceeded")
 	ErrInvalidOrderStatus     = errors.New("invalid order status for operation")
+	ErrInsufficientInventory  = errors.New("insufficient inventory")
 )

@@ -11,14 +11,32 @@ type PaymentActivities struct {
 	Client payment.PaymentServiceClient
 }
 
+type CreatePaymentIntentInput struct {
+	OrderCode      string
+	TotalAmount    int64
+	Currency       string
+	Provider       string
+	RedirectUrl    string
+	IdempotencyKey string
+	TimeoutSeconds int32
+}
+
 func NewPaymentActivities(client payment.PaymentServiceClient) *PaymentActivities {
 	return &PaymentActivities{
 		Client: client,
 	}
 }
 
-func (a *PaymentActivities) CreatePaymentIntent(ctx context.Context, request *payment.CreatePaymentIntentRequest) (*payment.CreatePaymentIntentResponse, error) {
-	resp, err := a.Client.CreatePaymentIntent(ctx, request)
+func (a *PaymentActivities) CreatePaymentIntent(ctx context.Context, in *CreatePaymentIntentInput) (*payment.CreatePaymentIntentResponse, error) {
+	resp, err := a.Client.CreatePaymentIntent(ctx, &payment.CreatePaymentIntentRequest{
+		OrderCode:      in.OrderCode,
+		AmountCents:    in.TotalAmount,
+		Currency:       in.Currency,
+		Provider:       payment.PaymentProvider(payment.PaymentProvider_value[in.Provider]),
+		RedirectUrl:    in.RedirectUrl,
+		IdempotencyKey: in.IdempotencyKey,
+		TimeoutSeconds: in.TimeoutSeconds,
+	})
 	if err != nil {
 		return nil, fmt.Errorf("failed to create payment intent: %w", err)
 	}

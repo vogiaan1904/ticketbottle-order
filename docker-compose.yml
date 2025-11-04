@@ -170,6 +170,86 @@ services:
       - ticketbottle-network
     restart: unless-stopped
 
+  # Temporal Server
+  elasticsearch-temporal:
+    container_name: ticketbottle-elasticsearch-temporal
+    environment:
+      - cluster.routing.allocation.disk.threshold_enabled=true
+      - cluster.routing.allocation.disk.watermark.low=512mb
+      - cluster.routing.allocation.disk.watermark.high=256mb
+      - cluster.routing.allocation.disk.watermark.flood_stage=128mb
+      - discovery.type=single-node
+      - ES_JAVA_OPTS=-Xms256m -Xmx256m
+      - xpack.security.enabled=false
+    image: elasticsearch:7.17.27
+    expose:
+      - 9200
+    volumes:
+      - /var/lib/elasticsearch/data
+    networks:
+      - ticketbottle-network
+    restart: unless-stopped
+  postgres-temporal:
+    container_name: ticketbottle-postgres-temporal
+    environment:
+      POSTGRES_PASSWORD: temporal
+      POSTGRES_USER: temporal
+    image: postgres:15
+    expose:
+      - 5432
+    volumes:
+      - /var/lib/postgresql/data
+    networks:
+      - ticketbottle-network
+    restart: unless-stopped
+  temporal:
+    container_name: ticketbottle-temporal
+    depends_on:
+      - postgres-temporal
+      - elasticsearch-temporal
+    environment:
+      - DB=postgres12
+      - DB_PORT=5432
+      - POSTGRES_USER=temporal
+      - POSTGRES_PWD=temporal
+      - POSTGRES_SEEDS=postgres-temporal
+      - ENABLE_ES=true
+      - ES_SEEDS=elasticsearch-temporal
+      - ES_VERSION=v7
+      - TEMPORAL_ADDRESS=temporal:7233
+      - TEMPORAL_CLI_ADDRESS=temporal:7233
+    image: temporalio/auto-setup:1.27.2
+    ports:
+      - 7233:7233
+    networks:
+      - ticketbottle-network
+    restart: unless-stopped
+  temporal-admin-tools:
+    container_name: temporal-admin-tools
+    depends_on:
+      - temporal
+    environment:
+      - TEMPORAL_ADDRESS=temporal:7233
+      - TEMPORAL_CLI_ADDRESS=temporal:7233
+    image: temporalio/admin-tools:1.27.2-tctl-1.18.2-cli-1.3.0
+    networks:
+      - ticketbottle-network
+    stdin_open: true
+    tty: true
+  temporal-ui:
+    container_name: temporal-ui
+    depends_on:
+      - temporal
+    environment:
+      - TEMPORAL_ADDRESS=temporal:7233
+      - TEMPORAL_CORS_ORIGINS=http://localhost:3000
+    image: temporalio/ui:2.34.0
+    ports:
+      - 8080:8080
+    networks:
+      - ticketbottle-network
+    restart: unless-stopped
+
   # ============================================
   # APPLICATION SERVICES
   # ============================================
@@ -251,6 +331,8 @@ services:
         condition: service_healthy
       kafka:
         condition: service_healthy
+      temporal:
+        condition: service_started
       event-service:
         condition: service_started
       inventory-service:
@@ -270,8 +352,18 @@ services:
     image: vogiaan19042004/ticketbottle-order-consumer:latest
     container_name: ticketbottle-order-consumer
     depends_on:
-      - kafka
-      - order-service
+      mongo-order:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+      temporal:
+        condition: service_started
+      event-service:
+        condition: service_started
+      inventory-service:
+        condition: service_started
+      payment-service:
+        condition: service_started
     env_file:
       - ./envs/order.env
     networks:

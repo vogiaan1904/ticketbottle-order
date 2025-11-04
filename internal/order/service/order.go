@@ -5,10 +5,11 @@ import (
 	"sync"
 	"time"
 
+	"github.com/vogiaan1904/ticketbottle-order/internal/infra/temporal"
 	"github.com/vogiaan1904/ticketbottle-order/internal/models"
 	"github.com/vogiaan1904/ticketbottle-order/internal/order"
 	repo "github.com/vogiaan1904/ticketbottle-order/internal/order/repository"
-	ordWf "github.com/vogiaan1904/ticketbottle-order/internal/workflows/order"
+	"github.com/vogiaan1904/ticketbottle-order/internal/workflows"
 	"github.com/vogiaan1904/ticketbottle-order/pkg/grpc/event"
 	"github.com/vogiaan1904/ticketbottle-order/pkg/grpc/inventory"
 	"github.com/vogiaan1904/ticketbottle-order/pkg/mongo"
@@ -113,37 +114,15 @@ func (s *implService) Create(ctx context.Context, in order.CreateOrderInput) (or
 		tcMap[tc.GetId()] = tc
 	}
 
-	resp, err := s.invSvc.CheckAvailability(ctx, &inventory.CheckAvailabilityRequest{
-		Items: func() []*inventory.CheckAvailabilityItem {
-			itms := make([]*inventory.CheckAvailabilityItem, len(in.Items))
-			for i, it := range in.Items {
-				itms[i] = &inventory.CheckAvailabilityItem{
-					TicketClassId: it.TicketClassID,
-					Quantity:      it.Quantity,
-				}
-			}
-			return itms
-		}(),
-	})
-	if err != nil {
-		s.l.Errorf(ctx, "internal.order.service.Create.invSvc.CheckAvailability: %v", err)
-		return order.CreateOrderOutput{}, err
-	}
-
-	if !resp.Accept {
-		s.l.Errorf(ctx, "internal.order.service.Create: %v", order.ErrNotEnoughTickets)
-		return order.CreateOrderOutput{}, order.ErrNotEnoughTickets
-	}
-
-	// Calculate total amount and prepare order items
+	// Calculate order amount and prepare items
 	amt := int64(0)
-	itmIns := make([]repo.CreateOrderItemOption, len(in.Items))
+	itmIns := make([]workflows.CreateOrderItemInput, len(in.Items))
 
 	for i, itm := range in.Items {
 		tc := tcMap[itm.TicketClassID]
 		tt := tc.PriceCents * int64(itm.Quantity)
 		amt += tt
-		itmIns[i] = repo.CreateOrderItemOption{
+		itmIns[i] = workflows.CreateOrderItemInput{
 			TicketClassID:   itm.TicketClassID,
 			TicketClassName: tc.Name,
 			PriceAtPurchase: tc.PriceCents,
@@ -152,114 +131,47 @@ func (s *implService) Create(ctx context.Context, in order.CreateOrderInput) (or
 		}
 	}
 
-	// Generate order code and create order record
 	code := util.GenerateOrderCodeWithEventPrefix(e.Name)
 
-	o, err := s.repo.Create(ctx, repo.CreateOrderOption{
-		Code:         code,
-		UserID:       in.UserID,
-		Email:        in.Email,
-		Phone:        in.Phone,
-		UserFullName: in.UserFullName,
-		EventID:      in.EventID,
-		Currency:     "VND",
-		Status:       models.OrderStatusPending,
-		TotalAmount:  amt,
-	})
-	if err != nil {
-		s.l.Errorf(ctx, "failed to create order: %v", err)
-		return order.CreateOrderOutput{}, err
-	}
-
-	itms, err := s.repo.CreateManyItems(ctx, o.ID.Hex(), itmIns)
-	if err != nil {
-		s.delete(ctx, o.ID.Hex())
-		s.l.Errorf(ctx, "failed to create order items: %v", err)
-		return order.CreateOrderOutput{}, err
-	}
-
-	// Start Temporal workflow for order processing
 	wfOpts := client.StartWorkflowOptions{
-		ID:        "create-order-" + o.Code,
-		TaskQueue: s.cfg.TemporalTaskQueue,
+		ID:        workflows.GetCreateOrderWorkflowID(code),
+		TaskQueue: temporal.CreateOrderTaskQueue,
 	}
 
-	// Prepare workflow parameters
-	wfParams := ordWf.CreateOrderWorkflowParams{
-		Order:           o,
-		Items:           itms,
+	wfIn := workflows.CreateOrderWorkflowInput{
+		OrderCode:       code,
+		UserID:          in.UserID,
+		Email:           in.Email,
+		Phone:           in.Phone,
+		UserFullName:    in.UserFullName,
+		EventID:         in.EventID,
+		EventName:       e.Name,
+		Currency:        "VND",
+		TotalAmount:     amt,
+		Items:           itmIns,
 		PaymentProvider: string(in.PaymentMethod),
 		RedirectUrl:     in.RedirectUrl,
-		IdempotencyKey:  generatePaymentIdempotencyKey(o.Code, string(in.PaymentMethod)),
-		TimeoutSeconds:  s.cfg.PaymentTimeoutSeconds,
+		IdempotencyKey:  generatePaymentIdempotencyKey(code, string(in.PaymentMethod)),
 	}
 
-	wfRun, err := s.temporal.ExecuteWorkflow(ctx, wfOpts, ordWf.ProcessCreateOrderWorkflow, wfParams)
+	wfRun, err := s.temporal.ExecuteWorkflow(ctx, wfOpts, workflows.CreateOrder, &wfIn)
 	if err != nil {
-		s.l.Errorf(ctx, "failed to start pre-payment workflow: %v", err)
-		s.delete(ctx, o.ID.Hex())
+		s.l.Errorf(ctx, "failed to start create order workflow: %v", err)
 		return order.CreateOrderOutput{}, err
 	}
 
-	s.l.Infof(ctx, "Started pre-payment workflow for order %s, workflowID: %s, runID: %s", o.Code, wfRun.GetID(), wfRun.GetRunID())
-
-	// Get the workflow result (payment URL)
-	var wfRes ordWf.CreateOrderWorkflowResult
+	var wfRes workflows.CreateOrderWorkflowResult
 	err = wfRun.Get(ctx, &wfRes)
 	if err != nil {
-		s.l.Errorf(ctx, "pre-payment workflow failed: %v", err)
+		s.l.Errorf(ctx, "create order workflow failed: %v", err)
 		return order.CreateOrderOutput{}, err
 	}
 
 	return order.CreateOrderOutput{
-		Order:      o,
-		OrderItems: itms,
+		Order:      wfRes.Order,
+		OrderItems: wfRes.OrderItems,
 		PaymentUrl: wfRes.PaymentUrl,
 	}, nil
-}
-
-func (s *implService) confirm(ctx context.Context, code string) error {
-	o, err := s.repo.GetOne(ctx, repo.GetOneOrderOption{
-		FilterOrder: order.FilterOrder{
-			Code: code,
-		},
-	})
-	if err != nil {
-		s.l.Error(ctx, "internal.order.service.HandlePaymentStatus: cannot get order by code %v: %v", code, err)
-		return err
-	}
-
-	if o.Status == models.OrderStatusCompleted {
-		s.l.Warnf(ctx, "Order %s is already confirmed", o.Code)
-		return nil // Idempotent - already processed
-	}
-
-	_, err = s.invSvc.Confirm(ctx, &inventory.ConfirmRequest{
-		OrderCode: code,
-	})
-	if err != nil {
-		s.l.Errorf(ctx, "Failed to confirm reservation for order %s: %v", code, err)
-		return err
-	}
-
-	_, err = s.repo.Update(ctx, o.ID.Hex(), repo.UpdateOrderOption{
-		Status: models.OrderStatusCompleted,
-	})
-	if err != nil {
-		s.l.Errorf(ctx, "Failed to update order status for %s: %v", code, err)
-		return err
-	}
-
-	err = s.publishCheckoutCompletedEvent(ctx, order.PubCheckoutCompletedEventInput{
-		SessionID: o.SessionID,
-		UserID:    o.UserID,
-		EventID:   o.EventID,
-	})
-	if err != nil {
-		s.l.Errorf(ctx, "Failed to publish order confirmed event for %s: %v", code, err)
-	}
-
-	return nil
 }
 
 func (s *implService) handlePaymentFailure(ctx context.Context, code string) error {
@@ -299,16 +211,6 @@ func (s *implService) handlePaymentFailure(ctx context.Context, code string) err
 		s.l.Errorf(ctx, "internal.order.service.handlePaymentFailure.publishCheckoutFailedEvent: %v", err)
 	}
 
-	return nil
-}
-
-func (s *implService) delete(ctx context.Context, orderID string) error {
-	err := s.repo.Delete(ctx, orderID)
-	if err != nil {
-		s.l.Errorf(ctx, "Failed to delete order %s: %v", orderID, err)
-		return err
-	}
-	s.l.Infof(ctx, "Successfully deleted order %s", orderID)
 	return nil
 }
 
