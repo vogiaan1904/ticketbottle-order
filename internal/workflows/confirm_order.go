@@ -17,11 +17,6 @@ type ConfirmOrderWorkflowInput struct {
 }
 
 // ProcessPostPaymentOrder handles the post-payment phase of order processing
-// This is triggered after successful payment and includes:
-// 1. Validating order status
-// 2. Confirming inventory reservation
-// 3. Updating order status to payment success
-// 4. Finalizing the order
 func ConfirmOrder(ctx workflow.Context, in *ConfirmOrderWorkflowInput) error {
 	logger := workflow.GetLogger(ctx)
 	logger.Info("Starting confirm order workflow", "orderCode", in.OrderCode)
