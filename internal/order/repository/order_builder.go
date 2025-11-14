@@ -17,6 +17,7 @@ func (r *implRepository) buildOrderModel(opt CreateOrderOption) models.Order {
 		Phone:        opt.Phone,
 		EventID:      opt.EventID,
 		TotalAmount:  opt.TotalAmount,
+		Currency:     opt.Currency,
 		Status:       opt.Status,
 		CreatedAt:    now,
 		UpdatedAt:    now,

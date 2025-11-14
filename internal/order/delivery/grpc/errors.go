@@ -26,9 +26,7 @@ var (
 	ErrGRPCEventConfigNotFound  = pkgErrors.NewGRPCError("ORD014", "Event config not found")
 
 	// Checkout errors
-	ErrGRPCCheckoutExpired          = pkgErrors.NewGRPCError("ORD015", "Checkout session has expired")
-	ErrGRPCInvalidCheckoutToken     = pkgErrors.NewGRPCError("ORD016", "Invalid checkout token")
-	ErrGRPCCheckoutTokenAlreadyUsed = pkgErrors.NewGRPCError("ORD017", "Checkout token has already been used")
+	ErrGRPCInvalidCheckoutToken = pkgErrors.NewGRPCError("ORD016", "Invalid checkout token")
 )
 
 func (s *grpcService) mapError(err error) error {
@@ -61,12 +59,8 @@ func (s *grpcService) mapError(err error) error {
 		return ErrGRPCNotEnoughTickets
 	case order.ErrEventConfigNotFound:
 		return ErrGRPCEventConfigNotFound
-	case order.ErrCheckoutExpired:
-		return ErrGRPCCheckoutExpired
 	case order.ErrInvalidCheckoutToken:
 		return ErrGRPCInvalidCheckoutToken
-	case order.ErrCheckoutTokenAlreadyUsed:
-		return ErrGRPCCheckoutTokenAlreadyUsed
 	default:
 		return err
 	}

@@ -2,7 +2,6 @@ package activities
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/vogiaan1904/ticketbottle-order/pkg/grpc/payment"
 )
@@ -38,7 +37,7 @@ func (a *PaymentActivities) CreatePaymentIntent(ctx context.Context, in *CreateP
 		TimeoutSeconds: in.TimeoutSeconds,
 	})
 	if err != nil {
-		return nil, fmt.Errorf("failed to create payment intent: %w", err)
+		return nil, err
 	}
 
 	return resp, nil
@@ -49,5 +48,5 @@ func (a *PaymentActivities) CreatePaymentIntent(ctx context.Context, in *CreateP
 func (a *PaymentActivities) CancelPayment(ctx context.Context, orderCode string, reason string) error {
 	// TODO: Implement if payment service supports cancellation
 	// For now, we'll just log the cancellation request
-	return fmt.Errorf("payment cancellation not yet implemented for order: %s, reason: %s", orderCode, reason)
+	return nil
 }

@@ -32,6 +32,9 @@ func (s *grpcService) validateCreateOrderRequest(req *orderpb.CreateOrderRequest
 	if req.GetRedirectUrl() == "" {
 		return ErrValidationFailed
 	}
+	if req.GetCheckoutToken() == "" {
+		return ErrValidationFailed
+	}
 
 	for _, item := range req.GetItems() {
 		if err := validateCreateOrderItem(item); err != nil {

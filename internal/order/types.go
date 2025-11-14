@@ -30,10 +30,11 @@ type OrderItemInput struct {
 }
 
 type FilterOrder struct {
-	Code    string
-	UserID  string
-	EventID string
-	Status  *models.OrderStatus
+	Code      string
+	UserID    string
+	EventID   string
+	SessionID string
+	Status    *models.OrderStatus
 }
 
 type GetManyOrderInput struct {

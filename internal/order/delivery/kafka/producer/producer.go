@@ -8,6 +8,7 @@ import (
 	"github.com/IBM/sarama"
 	kafka "github.com/vogiaan1904/ticketbottle-order/internal/order/delivery/kafka"
 	"github.com/vogiaan1904/ticketbottle-order/pkg/logger"
+	"github.com/vogiaan1904/ticketbottle-order/pkg/util"
 )
 
 type Producer interface {
@@ -30,7 +31,7 @@ func NewProducer(prod sarama.SyncProducer, l logger.Logger) Producer {
 }
 
 func (p implProducer) PublishCheckoutCompleted(ctx context.Context, event kafka.CheckoutCompletedEvent) error {
-	event.Timestamp = time.Now().String()
+	event.Timestamp = util.TimeToISO8601Str(time.Now())
 	val, err := json.Marshal(event)
 	if err != nil {
 		p.l.Errorf(ctx, "order.delivery.kafka.producer.PublishCheckoutCompleted: %v", err)

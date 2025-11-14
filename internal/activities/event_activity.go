@@ -2,8 +2,8 @@ package activities
 
 import (
 	"context"
-	"fmt"
 
+	"github.com/vogiaan1904/ticketbottle-order/internal/order"
 	"github.com/vogiaan1904/ticketbottle-order/pkg/grpc/event"
 )
 
@@ -22,11 +22,11 @@ func (a *EventActivities) GetEvent(ctx context.Context, eventID string) (*event.
 		Id: eventID,
 	})
 	if err != nil {
-		return nil, fmt.Errorf("failed to get event: %w", err)
+		return nil, err
 	}
 
 	if resp.Event == nil {
-		return nil, fmt.Errorf("event not found")
+		return nil, order.ErrEventNotFound
 	}
 
 	return resp.Event, nil
@@ -37,11 +37,11 @@ func (a *EventActivities) GetEventConfig(ctx context.Context, eventID string) (*
 		EventId: eventID,
 	})
 	if err != nil {
-		return nil, fmt.Errorf("failed to get event config: %w", err)
+		return nil, err
 	}
 
 	if resp.EventConfig == nil {
-		return nil, fmt.Errorf("event config not found")
+		return nil, order.ErrEventConfigNotFound
 	}
 
 	return resp.EventConfig, nil

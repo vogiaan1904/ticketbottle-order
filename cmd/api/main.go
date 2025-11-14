@@ -24,6 +24,7 @@ import (
 	iSvc "github.com/vogiaan1904/ticketbottle-order/pkg/grpc/inventory"
 	opb "github.com/vogiaan1904/ticketbottle-order/pkg/grpc/order"
 	pSvc "github.com/vogiaan1904/ticketbottle-order/pkg/grpc/payment"
+	pkgJwt "github.com/vogiaan1904/ticketbottle-order/pkg/jwt"
 	pkgLog "github.com/vogiaan1904/ticketbottle-order/pkg/logger"
 	pkgTemporal "github.com/vogiaan1904/ticketbottle-order/pkg/temporal"
 	"google.golang.org/grpc"
@@ -89,6 +90,9 @@ func main() {
 	// Initialize repositories
 	oRepo := oRepo.New(l, db)
 
+	// Initialize JWT manager
+	jwtMgr := pkgJwt.NewManager(cfg.JWT.Secret, l)
+
 	// Initialize Temporal client
 	tCli, err := pkgTemporal.NewClient(cfg.Temporal)
 	if err != nil {
@@ -118,7 +122,7 @@ func main() {
 	}()
 
 	// Initialize services
-	oSvc := oSvc.New(l, oRepo, iSvc, eSvc, pSvc, oProd, tCli)
+	oSvc := oSvc.New(l, oRepo, jwtMgr, iSvc, eSvc, pSvc, oProd, tCli)
 
 	// Initialize gRpc services
 	oGrpc := oGrpc.NewGrpcService(oSvc, l)

@@ -10,6 +10,7 @@ import (
 
 type CreateOrderWorkflowInput struct {
 	OrderCode       string
+	SessionID       string
 	UserID          string
 	Email           string
 	Phone           string
@@ -60,7 +61,6 @@ func CreateOrder(ctx workflow.Context, in *CreateOrderWorkflowInput) (*CreateOrd
 
 	defer func() {
 		if err != nil {
-			// activity failed, and workflow context is canceled
 			logger.Error("Workflow failed, running compensations", "error", err)
 			disconnectedCtx, _ := workflow.NewDisconnectedContext(ctx)
 			compensations.Compensate(disconnectedCtx, false)

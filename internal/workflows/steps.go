@@ -40,6 +40,7 @@ func checkAvailability(ctx workflow.Context, in *CreateOrderWorkflowInput) (bool
 
 func createOrder(ctx workflow.Context, in *CreateOrderWorkflowInput) (*models.Order, error) {
 	opt := repo.CreateOrderOption{
+		SessionID:    in.SessionID,
 		Code:         in.OrderCode,
 		UserID:       in.UserID,
 		Email:        in.Email,
@@ -107,5 +108,19 @@ func processPayment(ctx workflow.Context, in *CreateOrderWorkflowInput) (*paymen
 
 func confirmInventory(ctx workflow.Context, oCode string) error {
 	err := workflow.ExecuteActivity(ctx, iActs.ConfirmInventory, oCode).Get(ctx, nil)
+	return err
+}
+
+func publishCheckoutCompleted(ctx workflow.Context, ssID, userID, eventID string) error {
+	if ssID == "" {
+		return nil
+	}
+
+	err := workflow.ExecuteActivity(ctx, epActs.PublishCheckoutCompleted,
+		activities.PublishCheckoutCompletedInput{
+			SessionID: ssID,
+			UserID:    userID,
+			EventID:   eventID,
+		}).Get(ctx, nil)
 	return err
 }

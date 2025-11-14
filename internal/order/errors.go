@@ -19,7 +19,5 @@ var (
 	ErrNotEnoughTickets     = errors.New("not enough tickets available")
 	ErrEventConfigNotFound  = errors.New("event config not found")
 
-	ErrCheckoutExpired          = errors.New("checkout session has expired")
-	ErrInvalidCheckoutToken     = errors.New("invalid checkout token")
-	ErrCheckoutTokenAlreadyUsed = errors.New("checkout token has already been used")
+	ErrInvalidCheckoutToken = errors.New("invalid checkout token")
 )

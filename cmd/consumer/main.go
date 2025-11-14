@@ -20,6 +20,7 @@ import (
 	eSvc "github.com/vogiaan1904/ticketbottle-order/pkg/grpc/event"
 	iSvc "github.com/vogiaan1904/ticketbottle-order/pkg/grpc/inventory"
 	pSvc "github.com/vogiaan1904/ticketbottle-order/pkg/grpc/payment"
+	pkgJwt "github.com/vogiaan1904/ticketbottle-order/pkg/jwt"
 	pkgLog "github.com/vogiaan1904/ticketbottle-order/pkg/logger"
 	pkgTemporal "github.com/vogiaan1904/ticketbottle-order/pkg/temporal"
 )
@@ -90,6 +91,9 @@ func main() {
 	db := mCli.Database(cfg.Mongo.Database)
 	oRepo := oRepo.New(l, db)
 
+	// Initialize JWT manager
+	jwtMgr := pkgJwt.NewManager(cfg.JWT.Secret, l)
+
 	// Initialize Temporal client
 	tCli, err := pkgTemporal.NewClient(cfg.Temporal)
 	if err != nil {
@@ -102,6 +106,7 @@ func main() {
 	oActs := acts.NewOrderActivities(oRepo)
 	pActs := acts.NewPaymentActivities(pSvc)
 	iActs := acts.NewInventoryActivities(iSvc)
+	epActs := acts.NewEventPublishingActivities(oProd)
 
 	w := temporal.NewOrderWorker(tCli, temporal.ConfirmOrderTaskQueue)
 
@@ -109,6 +114,7 @@ func main() {
 	w.RegisterActivity(oActs)
 	w.RegisterActivity(pActs)
 	w.RegisterActivity(iActs)
+	w.RegisterActivity(epActs)
 
 	// Start worker
 	go func() {
@@ -119,7 +125,7 @@ func main() {
 	}()
 
 	// Initialize services
-	oSvc := oSvc.New(l, oRepo, iSvc, eSvc, pSvc, oProd, tCli)
+	oSvc := oSvc.New(l, oRepo, jwtMgr, iSvc, eSvc, pSvc, oProd, tCli)
 
 	// Create consumer
 	cons := oCons.NewConsumer(kConsGr, oSvc, l)

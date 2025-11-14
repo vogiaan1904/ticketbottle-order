@@ -52,5 +52,12 @@ func ConfirmOrder(ctx workflow.Context, in *ConfirmOrderWorkflowInput) error {
 		return err
 	}
 
+	// 4. Publish checkout completed event to free waitroom slot
+	if err := publishCheckoutCompleted(ctx, o.SessionID, o.UserID, o.EventID); err != nil {
+		logger.Warn("Failed to publish checkout completed event", "error", err, "sessionID", o.SessionID)
+		return err
+	}
+
+	logger.Info("Order confirmed successfully", "orderCode", in.OrderCode)
 	return nil
 }

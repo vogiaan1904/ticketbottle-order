@@ -2,7 +2,6 @@ package activities
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/vogiaan1904/ticketbottle-order/internal/models"
 	"github.com/vogiaan1904/ticketbottle-order/internal/order"
@@ -22,7 +21,7 @@ func NewOrderActivities(repo repo.Repository) *OrderActivities {
 func (a *OrderActivities) CreateOrder(ctx context.Context, opt repo.CreateOrderOption) (*models.Order, error) {
 	o, err := a.Repo.Create(ctx, opt)
 	if err != nil {
-		return nil, fmt.Errorf("failed to create order: %w", err)
+		return nil, err
 	}
 
 	return &o, nil
@@ -31,7 +30,7 @@ func (a *OrderActivities) CreateOrder(ctx context.Context, opt repo.CreateOrderO
 func (a *OrderActivities) CreateOrderItems(ctx context.Context, orderID string, items []repo.CreateOrderItemOption) ([]models.OrderItem, error) {
 	itms, err := a.Repo.CreateManyItems(ctx, orderID, items)
 	if err != nil {
-		return nil, fmt.Errorf("failed to create order items: %w", err)
+		return nil, err
 	}
 
 	return itms, nil
@@ -44,7 +43,7 @@ func (a *OrderActivities) GetOrder(ctx context.Context, code string) (*models.Or
 		},
 	})
 	if err != nil {
-		return nil, fmt.Errorf("failed to get order: %w", err)
+		return nil, err
 	}
 
 	return &o, nil
@@ -55,7 +54,7 @@ func (a *OrderActivities) UpdateOrderStatus(ctx context.Context, ID string, stat
 		Status: status,
 	})
 	if err != nil {
-		return fmt.Errorf("failed to update order status: %w", err)
+		return err
 	}
 
 	return nil
@@ -64,7 +63,7 @@ func (a *OrderActivities) UpdateOrderStatus(ctx context.Context, ID string, stat
 func (a *OrderActivities) DeleteOrder(ctx context.Context, ID string) error {
 	err := a.Repo.Delete(ctx, ID)
 	if err != nil {
-		return fmt.Errorf("failed to delete order: %w", err)
+		return err
 	}
 
 	return nil
@@ -73,7 +72,7 @@ func (a *OrderActivities) DeleteOrder(ctx context.Context, ID string) error {
 func (a *OrderActivities) DeleteOrderItems(ctx context.Context, ID string) error {
 	err := a.Repo.DeleteItemByOrderID(ctx, ID)
 	if err != nil {
-		return fmt.Errorf("failed to delete order items: %w", err)
+		return err
 	}
 
 	return nil

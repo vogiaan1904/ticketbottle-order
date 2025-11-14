@@ -453,6 +453,102 @@ func (x *CancelPaymentIntentResponse) GetStatus() PaymentStatus {
 	return PaymentStatus_PENDING
 }
 
+type GetPaymentUrlByIdempotencyKeyRequest struct {
+	state          protoimpl.MessageState `protogen:"open.v1"`
+	IdempotencyKey string                 `protobuf:"bytes,1,opt,name=idempotency_key,json=idempotencyKey,proto3" json:"idempotency_key,omitempty"`
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
+}
+
+func (x *GetPaymentUrlByIdempotencyKeyRequest) Reset() {
+	*x = GetPaymentUrlByIdempotencyKeyRequest{}
+	mi := &file_payment_proto_msgTypes[6]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetPaymentUrlByIdempotencyKeyRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetPaymentUrlByIdempotencyKeyRequest) ProtoMessage() {}
+
+func (x *GetPaymentUrlByIdempotencyKeyRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_payment_proto_msgTypes[6]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetPaymentUrlByIdempotencyKeyRequest.ProtoReflect.Descriptor instead.
+func (*GetPaymentUrlByIdempotencyKeyRequest) Descriptor() ([]byte, []int) {
+	return file_payment_proto_rawDescGZIP(), []int{6}
+}
+
+func (x *GetPaymentUrlByIdempotencyKeyRequest) GetIdempotencyKey() string {
+	if x != nil {
+		return x.IdempotencyKey
+	}
+	return ""
+}
+
+type GetPaymentUrlByIdempotencyKeyResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	PaymentUrl    string                 `protobuf:"bytes,1,opt,name=payment_url,json=paymentUrl,proto3" json:"payment_url,omitempty"`
+	Status        PaymentStatus          `protobuf:"varint,2,opt,name=status,proto3,enum=payment.PaymentStatus" json:"status,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetPaymentUrlByIdempotencyKeyResponse) Reset() {
+	*x = GetPaymentUrlByIdempotencyKeyResponse{}
+	mi := &file_payment_proto_msgTypes[7]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetPaymentUrlByIdempotencyKeyResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetPaymentUrlByIdempotencyKeyResponse) ProtoMessage() {}
+
+func (x *GetPaymentUrlByIdempotencyKeyResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_payment_proto_msgTypes[7]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetPaymentUrlByIdempotencyKeyResponse.ProtoReflect.Descriptor instead.
+func (*GetPaymentUrlByIdempotencyKeyResponse) Descriptor() ([]byte, []int) {
+	return file_payment_proto_rawDescGZIP(), []int{7}
+}
+
+func (x *GetPaymentUrlByIdempotencyKeyResponse) GetPaymentUrl() string {
+	if x != nil {
+		return x.PaymentUrl
+	}
+	return ""
+}
+
+func (x *GetPaymentUrlByIdempotencyKeyResponse) GetStatus() PaymentStatus {
+	if x != nil {
+		return x.Status
+	}
+	return PaymentStatus_PENDING
+}
+
 var File_payment_proto protoreflect.FileDescriptor
 
 const file_payment_proto_rawDesc = "" +
@@ -483,6 +579,12 @@ const file_payment_proto_rawDesc = "" +
 	"\x1bCancelPaymentIntentResponse\x12\x1d\n" +
 	"\n" +
 	"payment_id\x18\x01 \x01(\tR\tpaymentId\x12.\n" +
+	"\x06status\x18\x02 \x01(\x0e2\x16.payment.PaymentStatusR\x06status\"O\n" +
+	"$GetPaymentUrlByIdempotencyKeyRequest\x12'\n" +
+	"\x0fidempotency_key\x18\x01 \x01(\tR\x0eidempotencyKey\"x\n" +
+	"%GetPaymentUrlByIdempotencyKeyResponse\x12\x1f\n" +
+	"\vpayment_url\x18\x01 \x01(\tR\n" +
+	"paymentUrl\x12.\n" +
 	"\x06status\x18\x02 \x01(\x0e2\x16.payment.PaymentStatusR\x06status*A\n" +
 	"\x0fPaymentProvider\x12\v\n" +
 	"\aUNKNOWN\x10\x00\x12\v\n" +
@@ -494,11 +596,12 @@ const file_payment_proto_rawDesc = "" +
 	"\tCOMPLETED\x10\x01\x12\n" +
 	"\n" +
 	"\x06FAILED\x10\x02\x12\f\n" +
-	"\bCANCELED\x10\x032\xb9\x02\n" +
+	"\bCANCELED\x10\x032\xb9\x03\n" +
 	"\x0ePaymentService\x12`\n" +
 	"\x13CreatePaymentIntent\x12#.payment.CreatePaymentIntentRequest\x1a$.payment.CreatePaymentIntentResponse\x12c\n" +
 	"\x14ConfirmPaymentIntent\x12$.payment.ConfirmPaymentIntentRequest\x1a%.payment.ConfirmPaymentIntentResponse\x12`\n" +
-	"\x13CancelPaymentIntent\x12#.payment.CancelPaymentIntentRequest\x1a$.payment.CancelPaymentIntentResponseB9Z7github.com/vogiaan1904/ticketbottle-proto/proto/paymentb\x06proto3"
+	"\x13CancelPaymentIntent\x12#.payment.CancelPaymentIntentRequest\x1a$.payment.CancelPaymentIntentResponse\x12~\n" +
+	"\x1dGetPaymentUrlByIdempotencyKey\x12-.payment.GetPaymentUrlByIdempotencyKeyRequest\x1a..payment.GetPaymentUrlByIdempotencyKeyResponseB9Z7github.com/vogiaan1904/ticketbottle-proto/proto/paymentb\x06proto3"
 
 var (
 	file_payment_proto_rawDescOnce sync.Once
@@ -513,32 +616,37 @@ func file_payment_proto_rawDescGZIP() []byte {
 }
 
 var file_payment_proto_enumTypes = make([]protoimpl.EnumInfo, 2)
-var file_payment_proto_msgTypes = make([]protoimpl.MessageInfo, 6)
+var file_payment_proto_msgTypes = make([]protoimpl.MessageInfo, 8)
 var file_payment_proto_goTypes = []any{
-	(PaymentProvider)(0),                 // 0: payment.PaymentProvider
-	(PaymentStatus)(0),                   // 1: payment.PaymentStatus
-	(*CreatePaymentIntentRequest)(nil),   // 2: payment.CreatePaymentIntentRequest
-	(*CreatePaymentIntentResponse)(nil),  // 3: payment.CreatePaymentIntentResponse
-	(*ConfirmPaymentIntentRequest)(nil),  // 4: payment.ConfirmPaymentIntentRequest
-	(*ConfirmPaymentIntentResponse)(nil), // 5: payment.ConfirmPaymentIntentResponse
-	(*CancelPaymentIntentRequest)(nil),   // 6: payment.CancelPaymentIntentRequest
-	(*CancelPaymentIntentResponse)(nil),  // 7: payment.CancelPaymentIntentResponse
+	(PaymentProvider)(0),                          // 0: payment.PaymentProvider
+	(PaymentStatus)(0),                            // 1: payment.PaymentStatus
+	(*CreatePaymentIntentRequest)(nil),            // 2: payment.CreatePaymentIntentRequest
+	(*CreatePaymentIntentResponse)(nil),           // 3: payment.CreatePaymentIntentResponse
+	(*ConfirmPaymentIntentRequest)(nil),           // 4: payment.ConfirmPaymentIntentRequest
+	(*ConfirmPaymentIntentResponse)(nil),          // 5: payment.ConfirmPaymentIntentResponse
+	(*CancelPaymentIntentRequest)(nil),            // 6: payment.CancelPaymentIntentRequest
+	(*CancelPaymentIntentResponse)(nil),           // 7: payment.CancelPaymentIntentResponse
+	(*GetPaymentUrlByIdempotencyKeyRequest)(nil),  // 8: payment.GetPaymentUrlByIdempotencyKeyRequest
+	(*GetPaymentUrlByIdempotencyKeyResponse)(nil), // 9: payment.GetPaymentUrlByIdempotencyKeyResponse
 }
 var file_payment_proto_depIdxs = []int32{
 	0, // 0: payment.CreatePaymentIntentRequest.provider:type_name -> payment.PaymentProvider
 	1, // 1: payment.ConfirmPaymentIntentResponse.status:type_name -> payment.PaymentStatus
 	1, // 2: payment.CancelPaymentIntentResponse.status:type_name -> payment.PaymentStatus
-	2, // 3: payment.PaymentService.CreatePaymentIntent:input_type -> payment.CreatePaymentIntentRequest
-	4, // 4: payment.PaymentService.ConfirmPaymentIntent:input_type -> payment.ConfirmPaymentIntentRequest
-	6, // 5: payment.PaymentService.CancelPaymentIntent:input_type -> payment.CancelPaymentIntentRequest
-	3, // 6: payment.PaymentService.CreatePaymentIntent:output_type -> payment.CreatePaymentIntentResponse
-	5, // 7: payment.PaymentService.ConfirmPaymentIntent:output_type -> payment.ConfirmPaymentIntentResponse
-	7, // 8: payment.PaymentService.CancelPaymentIntent:output_type -> payment.CancelPaymentIntentResponse
-	6, // [6:9] is the sub-list for method output_type
-	3, // [3:6] is the sub-list for method input_type
-	3, // [3:3] is the sub-list for extension type_name
-	3, // [3:3] is the sub-list for extension extendee
-	0, // [0:3] is the sub-list for field type_name
+	1, // 3: payment.GetPaymentUrlByIdempotencyKeyResponse.status:type_name -> payment.PaymentStatus
+	2, // 4: payment.PaymentService.CreatePaymentIntent:input_type -> payment.CreatePaymentIntentRequest
+	4, // 5: payment.PaymentService.ConfirmPaymentIntent:input_type -> payment.ConfirmPaymentIntentRequest
+	6, // 6: payment.PaymentService.CancelPaymentIntent:input_type -> payment.CancelPaymentIntentRequest
+	8, // 7: payment.PaymentService.GetPaymentUrlByIdempotencyKey:input_type -> payment.GetPaymentUrlByIdempotencyKeyRequest
+	3, // 8: payment.PaymentService.CreatePaymentIntent:output_type -> payment.CreatePaymentIntentResponse
+	5, // 9: payment.PaymentService.ConfirmPaymentIntent:output_type -> payment.ConfirmPaymentIntentResponse
+	7, // 10: payment.PaymentService.CancelPaymentIntent:output_type -> payment.CancelPaymentIntentResponse
+	9, // 11: payment.PaymentService.GetPaymentUrlByIdempotencyKey:output_type -> payment.GetPaymentUrlByIdempotencyKeyResponse
+	8, // [8:12] is the sub-list for method output_type
+	4, // [4:8] is the sub-list for method input_type
+	4, // [4:4] is the sub-list for extension type_name
+	4, // [4:4] is the sub-list for extension extendee
+	0, // [0:4] is the sub-list for field type_name
 }
 
 func init() { file_payment_proto_init() }
@@ -552,7 +660,7 @@ func file_payment_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_payment_proto_rawDesc), len(file_payment_proto_rawDesc)),
 			NumEnums:      2,
-			NumMessages:   6,
+			NumMessages:   8,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

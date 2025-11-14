@@ -2,7 +2,6 @@ package activities
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/vogiaan1904/ticketbottle-order/pkg/grpc/inventory"
 )
@@ -24,7 +23,7 @@ func (a *InventoryActivities) ReserveInventory(ctx context.Context, orderCode st
 		Items:     items,
 	})
 	if err != nil {
-		return fmt.Errorf("failed to reserve inventory: %w", err)
+		return err
 	}
 
 	return nil
@@ -35,7 +34,7 @@ func (a *InventoryActivities) ReleaseInventory(ctx context.Context, orderCode st
 		OrderCode: orderCode,
 	})
 	if err != nil {
-		return fmt.Errorf("failed to release inventory: %w", err)
+		return err
 	}
 
 	return nil
@@ -46,7 +45,7 @@ func (a *InventoryActivities) ConfirmInventory(ctx context.Context, orderCode st
 		OrderCode: orderCode,
 	})
 	if err != nil {
-		return fmt.Errorf("failed to confirm inventory: %w", err)
+		return err
 	}
 
 	return nil
@@ -57,7 +56,7 @@ func (a *InventoryActivities) CheckAvailability(ctx context.Context, items []*in
 		Items: items,
 	})
 	if err != nil {
-		return false, fmt.Errorf("failed to check availability: %w", err)
+		return false, err
 	}
 
 	return resp.Accept, nil

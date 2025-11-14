@@ -12,6 +12,7 @@ import (
 	"github.com/vogiaan1904/ticketbottle-order/internal/workflows"
 	"github.com/vogiaan1904/ticketbottle-order/pkg/grpc/event"
 	"github.com/vogiaan1904/ticketbottle-order/pkg/grpc/inventory"
+	"github.com/vogiaan1904/ticketbottle-order/pkg/grpc/payment"
 	"github.com/vogiaan1904/ticketbottle-order/pkg/mongo"
 	"github.com/vogiaan1904/ticketbottle-order/pkg/util"
 	"go.temporal.io/sdk/client"
@@ -73,16 +74,49 @@ func (s *implService) Create(ctx context.Context, in order.CreateOrderInput) (or
 		return order.CreateOrderOutput{}, order.ErrEventNotReadyForSale
 	}
 
+	var ssID string
 	if eCfg.AllowWaitRoom {
-		claim, err := s.validateCheckoutToken(ctx, in.CheckoutToken)
+		claim, err := s.validateCheckoutToken(ctx, in)
 		if err != nil {
 			s.l.Errorf(ctx, "internal.order.service.Create: %v", err)
 			return order.CreateOrderOutput{}, err
 		}
 
-		if claim.UserID != in.UserID || claim.EventID != in.EventID {
-			s.l.Errorf(ctx, "internal.order.service.Create: %v", order.ErrInvalidCheckoutToken)
-			return order.CreateOrderOutput{}, order.ErrInvalidCheckoutToken
+		ssID = claim.SessionID
+
+		existingOrder, err := s.repo.GetOne(ctx, repo.GetOneOrderOption{
+			FilterOrder: order.FilterOrder{
+				SessionID: ssID,
+			},
+		})
+		if err == nil {
+			switch existingOrder.Status {
+			case models.OrderStatusPending, models.OrderStatusCompleted:
+				itms, err := s.repo.ListItemByOrderID(ctx, existingOrder.ID.Hex())
+				if err != nil {
+					s.l.Errorf(ctx, "internal.order.service.Create.repo.ListItemByOrderID: %v", err)
+					return order.CreateOrderOutput{}, err
+				}
+
+				pmtResp, err := s.pmtSvc.GetPaymentUrlByIdempotencyKey(ctx, &payment.GetPaymentUrlByIdempotencyKeyRequest{
+					IdempotencyKey: generatePaymentIdempotencyKey(existingOrder.Code, string(in.PaymentMethod)),
+				})
+				if err != nil {
+					s.l.Errorf(ctx, "internal.order.service.Create.pmtSvc.GetPaymentUrlByIdempotencyKey: %v", err)
+					return order.CreateOrderOutput{}, err
+				}
+
+				return order.CreateOrderOutput{
+					Order:      &existingOrder,
+					OrderItems: itms,
+					PaymentUrl: pmtResp.PaymentUrl,
+				}, nil
+			case models.OrderStatusCancelled, models.OrderStatusPaymentFailed, models.OrderStatusTimeout:
+
+			}
+		} else if err != mongo.ErrNoDocuments {
+			s.l.Errorf(ctx, "internal.order.service.Create.repo.GetOne: %v", err)
+			return order.CreateOrderOutput{}, err
 		}
 	}
 
@@ -114,7 +148,6 @@ func (s *implService) Create(ctx context.Context, in order.CreateOrderInput) (or
 		tcMap[tc.GetId()] = tc
 	}
 
-	// Calculate order amount and prepare items
 	amt := int64(0)
 	itmIns := make([]workflows.CreateOrderItemInput, len(in.Items))
 
@@ -140,6 +173,7 @@ func (s *implService) Create(ctx context.Context, in order.CreateOrderInput) (or
 
 	wfIn := workflows.CreateOrderWorkflowInput{
 		OrderCode:       code,
+		SessionID:       ssID,
 		UserID:          in.UserID,
 		Email:           in.Email,
 		Phone:           in.Phone,

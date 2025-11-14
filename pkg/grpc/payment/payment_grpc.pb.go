@@ -19,9 +19,10 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	PaymentService_CreatePaymentIntent_FullMethodName  = "/payment.PaymentService/CreatePaymentIntent"
-	PaymentService_ConfirmPaymentIntent_FullMethodName = "/payment.PaymentService/ConfirmPaymentIntent"
-	PaymentService_CancelPaymentIntent_FullMethodName  = "/payment.PaymentService/CancelPaymentIntent"
+	PaymentService_CreatePaymentIntent_FullMethodName           = "/payment.PaymentService/CreatePaymentIntent"
+	PaymentService_ConfirmPaymentIntent_FullMethodName          = "/payment.PaymentService/ConfirmPaymentIntent"
+	PaymentService_CancelPaymentIntent_FullMethodName           = "/payment.PaymentService/CancelPaymentIntent"
+	PaymentService_GetPaymentUrlByIdempotencyKey_FullMethodName = "/payment.PaymentService/GetPaymentUrlByIdempotencyKey"
 )
 
 // PaymentServiceClient is the client API for PaymentService service.
@@ -31,6 +32,7 @@ type PaymentServiceClient interface {
 	CreatePaymentIntent(ctx context.Context, in *CreatePaymentIntentRequest, opts ...grpc.CallOption) (*CreatePaymentIntentResponse, error)
 	ConfirmPaymentIntent(ctx context.Context, in *ConfirmPaymentIntentRequest, opts ...grpc.CallOption) (*ConfirmPaymentIntentResponse, error)
 	CancelPaymentIntent(ctx context.Context, in *CancelPaymentIntentRequest, opts ...grpc.CallOption) (*CancelPaymentIntentResponse, error)
+	GetPaymentUrlByIdempotencyKey(ctx context.Context, in *GetPaymentUrlByIdempotencyKeyRequest, opts ...grpc.CallOption) (*GetPaymentUrlByIdempotencyKeyResponse, error)
 }
 
 type paymentServiceClient struct {
@@ -71,6 +73,16 @@ func (c *paymentServiceClient) CancelPaymentIntent(ctx context.Context, in *Canc
 	return out, nil
 }
 
+func (c *paymentServiceClient) GetPaymentUrlByIdempotencyKey(ctx context.Context, in *GetPaymentUrlByIdempotencyKeyRequest, opts ...grpc.CallOption) (*GetPaymentUrlByIdempotencyKeyResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(GetPaymentUrlByIdempotencyKeyResponse)
+	err := c.cc.Invoke(ctx, PaymentService_GetPaymentUrlByIdempotencyKey_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // PaymentServiceServer is the server API for PaymentService service.
 // All implementations must embed UnimplementedPaymentServiceServer
 // for forward compatibility.
@@ -78,6 +90,7 @@ type PaymentServiceServer interface {
 	CreatePaymentIntent(context.Context, *CreatePaymentIntentRequest) (*CreatePaymentIntentResponse, error)
 	ConfirmPaymentIntent(context.Context, *ConfirmPaymentIntentRequest) (*ConfirmPaymentIntentResponse, error)
 	CancelPaymentIntent(context.Context, *CancelPaymentIntentRequest) (*CancelPaymentIntentResponse, error)
+	GetPaymentUrlByIdempotencyKey(context.Context, *GetPaymentUrlByIdempotencyKeyRequest) (*GetPaymentUrlByIdempotencyKeyResponse, error)
 	mustEmbedUnimplementedPaymentServiceServer()
 }
 
@@ -96,6 +109,9 @@ func (UnimplementedPaymentServiceServer) ConfirmPaymentIntent(context.Context, *
 }
 func (UnimplementedPaymentServiceServer) CancelPaymentIntent(context.Context, *CancelPaymentIntentRequest) (*CancelPaymentIntentResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method CancelPaymentIntent not implemented")
+}
+func (UnimplementedPaymentServiceServer) GetPaymentUrlByIdempotencyKey(context.Context, *GetPaymentUrlByIdempotencyKeyRequest) (*GetPaymentUrlByIdempotencyKeyResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetPaymentUrlByIdempotencyKey not implemented")
 }
 func (UnimplementedPaymentServiceServer) mustEmbedUnimplementedPaymentServiceServer() {}
 func (UnimplementedPaymentServiceServer) testEmbeddedByValue()                        {}
@@ -172,6 +188,24 @@ func _PaymentService_CancelPaymentIntent_Handler(srv interface{}, ctx context.Co
 	return interceptor(ctx, in, info, handler)
 }
 
+func _PaymentService_GetPaymentUrlByIdempotencyKey_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetPaymentUrlByIdempotencyKeyRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(PaymentServiceServer).GetPaymentUrlByIdempotencyKey(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: PaymentService_GetPaymentUrlByIdempotencyKey_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(PaymentServiceServer).GetPaymentUrlByIdempotencyKey(ctx, req.(*GetPaymentUrlByIdempotencyKeyRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // PaymentService_ServiceDesc is the grpc.ServiceDesc for PaymentService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -190,6 +224,10 @@ var PaymentService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "CancelPaymentIntent",
 			Handler:    _PaymentService_CancelPaymentIntent_Handler,
+		},
+		{
+			MethodName: "GetPaymentUrlByIdempotencyKey",
+			Handler:    _PaymentService_GetPaymentUrlByIdempotencyKey_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

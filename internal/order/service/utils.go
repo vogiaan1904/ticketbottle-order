@@ -4,6 +4,8 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/vogiaan1904/ticketbottle-order/internal/models"
+	"github.com/vogiaan1904/ticketbottle-order/internal/order"
 	"github.com/vogiaan1904/ticketbottle-order/pkg/grpc/inventory"
 )
 
@@ -22,4 +24,17 @@ func (s *implService) releaseTickets(ctx context.Context, code string) error {
 
 	s.l.Infof(ctx, "Successfully released tickets for order %s", code)
 	return nil
+}
+
+func (s *implService) validateCheckoutToken(ctx context.Context, in order.CreateOrderInput) (models.CheckoutTokenClaim, error) {
+	p, err := s.jwt.Verify(ctx, in.CheckoutToken)
+	if err != nil {
+		return models.CheckoutTokenClaim{}, order.ErrInvalidCheckoutToken
+	}
+
+	if p.UserID != in.UserID || p.EventID != in.EventID {
+		return models.CheckoutTokenClaim{}, order.ErrInvalidCheckoutToken
+	}
+
+	return p.CheckoutTokenClaim, nil
 }

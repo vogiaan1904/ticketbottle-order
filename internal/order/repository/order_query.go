@@ -39,6 +39,10 @@ func (r *implRepository) buildFilterQuery(ctx context.Context, fil order.FilterO
 		q["event_id"] = fil.EventID
 	}
 
+	if fil.SessionID != "" {
+		q["session_id"] = fil.SessionID
+	}
+
 	if fil.Status != nil {
 		q["status"] = *fil.Status
 	}

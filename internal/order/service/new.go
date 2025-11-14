@@ -23,10 +23,11 @@ type implService struct {
 	temporal temporalCli.Client
 }
 
-func New(l logger.Logger, repo repo.Repository, invSvc inventory.InventoryServiceClient, evSvc event.EventServiceClient, pmtSvc payment.PaymentServiceClient, prod producer.Producer, tprCli temporalCli.Client) order.Service {
+func New(l logger.Logger, repo repo.Repository, jwt pkgJwt.Manager, invSvc inventory.InventoryServiceClient, evSvc event.EventServiceClient, pmtSvc payment.PaymentServiceClient, prod producer.Producer, tprCli temporalCli.Client) order.Service {
 	return &implService{
 		l:        l,
 		repo:     repo,
+		jwt:      jwt,
 		invSvc:   invSvc,
 		evSvc:    evSvc,
 		pmtSvc:   pmtSvc,
