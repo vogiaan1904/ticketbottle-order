@@ -27,6 +27,10 @@ func (s *implService) releaseTickets(ctx context.Context, code string) error {
 }
 
 func (s *implService) validateCheckoutToken(ctx context.Context, in order.CreateOrderInput) (models.CheckoutTokenClaim, error) {
+	if in.CheckoutToken == "" {
+		return models.CheckoutTokenClaim{}, order.ErrInvalidCheckoutToken
+	}
+
 	p, err := s.jwt.Verify(ctx, in.CheckoutToken)
 	if err != nil {
 		return models.CheckoutTokenClaim{}, order.ErrInvalidCheckoutToken
